@@ -1338,8 +1338,9 @@ int gomupdf_pdf_set_annot_border(fz_context *ctx, pdf_annot *annot, float width)
 }
 
 int gomupdf_pdf_update_annot(fz_context *ctx, fz_document *doc, pdf_annot *annot) {
-    if (!ctx || !doc || !annot) return -1;
-    fz_try(ctx) { pdf_update_annot(ctx, pdf_document_from_fz_document(ctx, doc), annot); }
+    if (!ctx || !annot) return -1;
+    (void)doc;
+    fz_try(ctx) { pdf_update_annot(ctx, annot); }
     fz_catch(ctx) { return -1; }
     return 0;
 }
