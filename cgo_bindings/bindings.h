@@ -163,4 +163,103 @@ int gomupdf_search_text(fz_context *ctx, fz_stext_page *page, const char *needle
 // PDF permissions
 int gomupdf_pdf_permissions(fz_context *ctx, fz_document *doc);
 
+// Phase 2: Text output formats
+char *gomupdf_stext_page_to_html(fz_context *ctx, fz_stext_page *page);
+char *gomupdf_stext_page_to_xml(fz_context *ctx, fz_stext_page *page);
+char *gomupdf_stext_page_to_xhtml(fz_context *ctx, fz_stext_page *page);
+char *gomupdf_stext_page_to_json(fz_context *ctx, fz_stext_page *page);
+const char *gomupdf_stext_char_font(fz_context *ctx, fz_stext_char *ch);
+int gomupdf_stext_char_flags(fz_context *ctx, fz_stext_char *ch);
+
+// Phase 3: Image processing
+fz_pixmap *gomupdf_image_get_pixmap(fz_context *ctx, fz_image *img);
+int gomupdf_pixmap_to_png_bytes(fz_context *ctx, fz_pixmap *pix, unsigned char **out_data, size_t *out_len);
+int gomupdf_pixmap_to_jpeg_bytes(fz_context *ctx, fz_pixmap *pix, int quality, unsigned char **out_data, size_t *out_len);
+int gomupdf_pixmap_pixel(fz_context *ctx, fz_pixmap *pix, int x, int y);
+void gomupdf_pixmap_set_pixel(fz_context *ctx, fz_pixmap *pix, int x, int y, unsigned int val);
+void gomupdf_pixmap_clear_with(fz_context *ctx, fz_pixmap *pix, int value);
+void gomupdf_pixmap_invert(fz_context *ctx, fz_pixmap *pix);
+void gomupdf_pixmap_gamma(fz_context *ctx, fz_pixmap *pix, float gamma);
+void gomupdf_pixmap_tint(fz_context *ctx, fz_pixmap *pix, int black, int white);
+
+// Phase 4: Annotation system
+pdf_annot *gomupdf_pdf_first_annot(fz_context *ctx, fz_document *doc, fz_page *page);
+pdf_annot *gomupdf_pdf_next_annot(fz_context *ctx, pdf_annot *annot);
+int gomupdf_pdf_annot_type(fz_context *ctx, pdf_annot *annot);
+fz_rect gomupdf_pdf_annot_rect(fz_context *ctx, pdf_annot *annot);
+const char *gomupdf_pdf_annot_contents(fz_context *ctx, pdf_annot *annot);
+int gomupdf_pdf_set_annot_contents(fz_context *ctx, pdf_annot *annot, const char *text);
+int gomupdf_pdf_annot_color(fz_context *ctx, pdf_annot *annot, float *r, float *g, float *b, float *a);
+int gomupdf_pdf_set_annot_color(fz_context *ctx, pdf_annot *annot, float r, float g, float b, float a);
+float gomupdf_pdf_annot_opacity(fz_context *ctx, pdf_annot *annot);
+int gomupdf_pdf_set_annot_opacity(fz_context *ctx, pdf_annot *annot, float opacity);
+int gomupdf_pdf_annot_flags(fz_context *ctx, pdf_annot *annot);
+int gomupdf_pdf_set_annot_flags(fz_context *ctx, pdf_annot *annot, int flags);
+float gomupdf_pdf_annot_border(fz_context *ctx, pdf_annot *annot);
+int gomupdf_pdf_set_annot_border(fz_context *ctx, pdf_annot *annot, float width);
+int gomupdf_pdf_update_annot(fz_context *ctx, fz_document *doc, pdf_annot *annot);
+int gomupdf_pdf_delete_annot(fz_context *ctx, fz_document *doc, fz_page *page, pdf_annot *annot);
+pdf_annot *gomupdf_pdf_create_annot(fz_context *ctx, fz_document *doc, fz_page *page, int annot_type);
+fz_quad *gomupdf_pdf_annot_quad_points(fz_context *ctx, pdf_annot *annot, int *count);
+int gomupdf_pdf_set_annot_quad_points(fz_context *ctx, pdf_annot *annot, int count, fz_quad *quads);
+int gomupdf_pdf_set_annot_rect(fz_context *ctx, pdf_annot *annot, float x0, float y0, float x1, float y1);
+int gomupdf_pdf_set_annot_popup(fz_context *ctx, pdf_annot *annot, float x0, float y0, float x1, float y1);
+fz_rect gomupdf_pdf_annot_popup(fz_context *ctx, pdf_annot *annot);
+int gomupdf_pdf_apply_redactions(fz_context *ctx, fz_document *doc, fz_page *page);
+const char *gomupdf_pdf_annot_title(fz_context *ctx, pdf_annot *annot);
+int gomupdf_pdf_set_annot_title(fz_context *ctx, pdf_annot *annot, const char *title);
+
+// Phase 5: Link operations
+int gomupdf_pdf_create_link(fz_context *ctx, fz_document *doc, fz_page *page,
+    float x0, float y0, float x1, float y1, const char *uri, int page_num);
+int gomupdf_pdf_delete_link(fz_context *ctx, fz_document *doc, fz_page *page, fz_link *link);
+
+// Phase 6: Shape drawing
+fz_buffer *gomupdf_pdf_page_write_begin(fz_context *ctx, fz_document *doc, fz_page *page);
+int gomupdf_pdf_page_write_end(fz_context *ctx, fz_document *doc, fz_page *page, fz_buffer *contents);
+
+// Phase 7: Font operations
+fz_font *gomupdf_new_font_from_file(fz_context *ctx, const char *filename, int index);
+fz_font *gomupdf_new_font_from_buffer(fz_context *ctx, const char *data, size_t len, int index);
+void gomupdf_drop_font(fz_context *ctx, fz_font *font);
+const char *gomupdf_font_name(fz_context *ctx, fz_font *font);
+float gomupdf_font_ascender(fz_context *ctx, fz_font *font);
+float gomupdf_font_descender(fz_context *ctx, fz_font *font);
+float gomupdf_measure_text(fz_context *ctx, fz_font *font, const char *text, float size);
+float gomupdf_font_glyph_advance(fz_context *ctx, fz_font *font, int glyph, float size);
+
+// Phase 8: Widget/Form system
+pdf_annot *gomupdf_pdf_first_widget(fz_context *ctx, fz_document *doc, fz_page *page);
+pdf_annot *gomupdf_pdf_next_widget(fz_context *ctx, pdf_annot *widget);
+int gomupdf_pdf_widget_type(fz_context *ctx, pdf_annot *widget);
+const char *gomupdf_pdf_widget_field_name(fz_context *ctx, pdf_annot *widget);
+const char *gomupdf_pdf_widget_field_value(fz_context *ctx, pdf_annot *widget);
+int gomupdf_pdf_widget_set_field_value(fz_context *ctx, fz_document *doc, pdf_annot *widget, const char *value);
+int gomupdf_pdf_widget_field_flags(fz_context *ctx, pdf_annot *widget);
+int gomupdf_pdf_widget_set_field_flags(fz_context *ctx, pdf_annot *widget, int flags);
+int gomupdf_pdf_widget_is_checked(fz_context *ctx, pdf_annot *widget);
+int gomupdf_pdf_widget_toggle(fz_context *ctx, pdf_annot *widget);
+
+// Phase 9: Advanced features
+fz_display_list *gomupdf_new_display_list(fz_context *ctx, fz_rect bounds);
+void gomupdf_drop_display_list(fz_context *ctx, fz_display_list *list);
+fz_display_list *gomupdf_run_page_to_list(fz_context *ctx, fz_page *page, fz_display_list *list, fz_matrix ctm);
+fz_pixmap *gomupdf_display_list_get_pixmap(fz_context *ctx, fz_display_list *list, fz_matrix ctm, int alpha);
+
+fz_rect gomupdf_pdf_page_cropbox(fz_context *ctx, fz_document *doc, int page_num);
+int gomupdf_pdf_set_page_cropbox(fz_context *ctx, fz_document *doc, int page_num, float x0, float y0, float x1, float y1);
+fz_rect gomupdf_pdf_page_mediabox(fz_context *ctx, fz_document *doc, int page_num);
+int gomupdf_pdf_set_page_mediabox(fz_context *ctx, fz_document *doc, int page_num, float x0, float y0, float x1, float y1);
+int gomupdf_pdf_set_page_rotation(fz_context *ctx, fz_document *doc, int page_num, int rotation);
+
+int gomupdf_pdf_xref_length(fz_context *ctx, fz_document *doc);
+const char *gomupdf_pdf_xref_get_key(fz_context *ctx, fz_document *doc, int xref, const char *key);
+int gomupdf_pdf_xref_is_stream(fz_context *ctx, fz_document *doc, int xref);
+
+int gomupdf_pdf_embedded_file_count(fz_context *ctx, fz_document *doc);
+const char *gomupdf_pdf_embedded_file_name(fz_context *ctx, fz_document *doc, int idx);
+unsigned char *gomupdf_pdf_embedded_file_get(fz_context *ctx, fz_document *doc, int idx, size_t *out_len);
+int gomupdf_pdf_add_embedded_file(fz_context *ctx, fz_document *doc,
+    const char *filename, const char *mimetype, const unsigned char *data, size_t len);
+
 #endif // GOMUPDF_BINDINGS_H
