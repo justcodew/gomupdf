@@ -1620,7 +1620,8 @@ const char *gomupdf_pdf_widget_field_name(fz_context *ctx, pdf_annot *widget) {
     if (!ctx || !widget) return "";
     static __thread char buf[256];
     fz_try(ctx) {
-        const char *n = pdf_widget_field_name(ctx, widget);
+        /* 使用 pdf_annot_field_label 获取字段名 */
+        const char *n = pdf_annot_field_label(ctx, widget);
         if (n) snprintf(buf, sizeof(buf), "%s", n);
         else buf[0] = 0;
     }
@@ -1632,14 +1633,10 @@ const char *gomupdf_pdf_widget_field_value(fz_context *ctx, pdf_annot *widget) {
     if (!ctx || !widget) return "";
     static __thread char buf[4096];
     fz_try(ctx) {
-        pdf_obj *val = pdf_widget_field_value(ctx, widget);
-        if (val) {
-            const char *s = pdf_to_text_string(ctx, val);
-            if (s) snprintf(buf, sizeof(buf), "%s", s);
-            else buf[0] = 0;
-        } else {
-            buf[0] = 0;
-        }
+        /* 使用 pdf_annot_field_value 直接返回字段值的字符串 */
+        const char *val = pdf_annot_field_value(ctx, widget);
+        if (val) snprintf(buf, sizeof(buf), "%s", val);
+        else buf[0] = 0;
     }
     fz_catch(ctx) { buf[0] = 0; }
     return buf;
@@ -1647,10 +1644,8 @@ const char *gomupdf_pdf_widget_field_value(fz_context *ctx, pdf_annot *widget) {
 
 int gomupdf_pdf_widget_set_field_value(fz_context *ctx, fz_document *doc, pdf_annot *widget, const char *value) {
     if (!ctx || !doc || !widget || !value) return -1;
-    pdf_document *pdf = pdf_document_from_fz_document(ctx, doc);
-    if (!pdf) return -1;
     fz_try(ctx) {
-        pdf_widget_set_text_field_value(ctx, widget, value);
+        pdf_set_text_field_value(ctx, widget, value);
     }
     fz_catch(ctx) { return -1; }
     return 0;
@@ -1659,14 +1654,25 @@ int gomupdf_pdf_widget_set_field_value(fz_context *ctx, fz_document *doc, pdf_an
 int gomupdf_pdf_widget_field_flags(fz_context *ctx, pdf_annot *widget) {
     if (!ctx || !widget) return 0;
     int flags = 0;
-    fz_try(ctx) { flags = pdf_widget_field_flags(ctx, widget); }
+    fz_try(ctx) { flags = pdf_annot_field_flags(ctx, widget); }
     fz_catch(ctx) {}
     return flags;
 }
 
 int gomupdf_pdf_widget_set_field_flags(fz_context *ctx, pdf_annot *widget, int flags) {
     if (!ctx || !widget) return -1;
-    fz_try(ctx) { pdf_widget_set_field_flags(ctx, widget, flags); }
+    /* MuPDF 没有直接的 set_field_flags，需要通过底层对象操作 */
+    fz_try(ctx) {
+        pdf_obj *obj = pdf_annot_obj(ctx, widget);
+        pdf_obj *ff = pdf_dict_get(ctx, obj, PDF_NAME(Ff));
+        if (!ff) {
+            ff = pdf_new_int(ctx, flags);
+            pdf_dict_put(ctx, obj, PDF_NAME(Ff), ff);
+            pdf_drop_obj(ctx, ff);
+        } else {
+            pdf_set_int(ctx, ff, flags);
+        }
+    }
     fz_catch(ctx) { return -1; }
     return 0;
 }
@@ -1674,7 +1680,12 @@ int gomupdf_pdf_widget_set_field_flags(fz_context *ctx, pdf_annot *widget, int f
 int gomupdf_pdf_widget_is_checked(fz_context *ctx, pdf_annot *widget) {
     if (!ctx || !widget) return 0;
     int checked = 0;
-    fz_try(ctx) { checked = pdf_widget_is_checked(ctx, widget); }
+    fz_try(ctx) {
+        /* 通过 AS 字段检查是否选中 */
+        pdf_obj *obj = pdf_annot_obj(ctx, widget);
+        pdf_obj *as = pdf_dict_get(ctx, obj, PDF_NAME(AS));
+        checked = (as != NULL && !pdf_name_eq(ctx, as, PDF_NAME(Off)));
+    }
     fz_catch(ctx) {}
     return checked;
 }
