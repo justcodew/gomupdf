@@ -58,7 +58,6 @@ func (p *Pixmap) Save(filename string) error {
 		return fmt.Errorf("pixmap is nil")
 	}
 
-	// Determine format from filename extension
 	switch ext := getExt(filename); ext {
 	case ".png":
 		return p.pixmap.SavePNG(filename)
@@ -77,24 +76,68 @@ func (p *Pixmap) Close() {
 	}
 }
 
-// JPEG returns the pixmap as JPEG bytes.
-func (p *Pixmap) JPEG() ([]byte, error) {
-	// For now, save to a temp file and read back
-	// TODO: implement direct JPEG encoding
-	if p.pixmap == nil {
-		return nil, fmt.Errorf("pixmap is nil")
-	}
-	return nil, fmt.Errorf("JPEG encoding not yet implemented")
-}
-
 // PNG returns the pixmap as PNG bytes.
 func (p *Pixmap) PNG() ([]byte, error) {
-	// For now, save to a temp file and read back
-	// TODO: implement direct PNG encoding
 	if p.pixmap == nil {
 		return nil, fmt.Errorf("pixmap is nil")
 	}
-	return nil, fmt.Errorf("PNG encoding not yet implemented")
+	return p.pixmap.PNGBytes()
+}
+
+// JPEG returns the pixmap as JPEG bytes.
+func (p *Pixmap) JPEG(quality int) ([]byte, error) {
+	if p.pixmap == nil {
+		return nil, fmt.Errorf("pixmap is nil")
+	}
+	return p.pixmap.JPEGBytes(quality)
+}
+
+// Pixel returns the pixel value at (x, y).
+func (p *Pixmap) Pixel(x, y int) int {
+	if p.pixmap == nil {
+		return 0
+	}
+	return p.pixmap.Pixel(x, y)
+}
+
+// SetPixel sets the pixel value at (x, y).
+func (p *Pixmap) SetPixel(x, y, val int) {
+	if p.pixmap == nil {
+		return
+	}
+	p.pixmap.SetPixel(x, y, val)
+}
+
+// ClearWith clears the pixmap with the given value.
+func (p *Pixmap) ClearWith(value int) {
+	if p.pixmap == nil {
+		return
+	}
+	p.pixmap.ClearWith(value)
+}
+
+// Invert inverts the pixmap colors.
+func (p *Pixmap) Invert() {
+	if p.pixmap == nil {
+		return
+	}
+	p.pixmap.Invert()
+}
+
+// Gamma applies gamma correction.
+func (p *Pixmap) Gamma(gamma float64) {
+	if p.pixmap == nil {
+		return
+	}
+	p.pixmap.Gamma(gamma)
+}
+
+// Tint applies tinting.
+func (p *Pixmap) Tint(black, white int) {
+	if p.pixmap == nil {
+		return
+	}
+	p.pixmap.Tint(black, white)
 }
 
 // String returns a string representation of the pixmap.
@@ -106,7 +149,6 @@ func (p *Pixmap) String() string {
 }
 
 func getExt(filename string) string {
-	// Simple extension extraction
 	for i := len(filename) - 1; i >= 0; i-- {
 		if filename[i] == '.' {
 			return filename[i:]
