@@ -160,4 +160,4 @@ $ go run examples/extract/main.go test.pdf
 
 ---
 
-## 阶段 2：文本处理完整化（待开始）
+## 阶段 2：文本处理完整化（进行中）
