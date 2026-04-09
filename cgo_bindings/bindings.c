@@ -1004,7 +1004,7 @@ char *gomupdf_stext_page_to_html(fz_context *ctx, fz_stext_page *page) {
     fz_output *out = fz_new_output_with_buffer(ctx, buf);
     char *result = NULL;
     fz_try(ctx) {
-        fz_print_stext_page_as_html(ctx, out, page, 0, 0);
+        fz_print_stext_page_as_html(ctx, out, page, 0);
         fz_close_output(ctx, out);
         result = (char *)malloc(buf->len + 1);
         if (result) {
