@@ -286,3 +286,94 @@ func (tp *TextPage) NextChar(ch *C.fz_stext_char) *C.fz_stext_char {
 	})
 	return next
 }
+
+// HTML returns the text page content as HTML.
+func (tp *TextPage) HTML() string {
+	if tp.page == nil || tp.ctx == nil {
+		return ""
+	}
+	var html *C.char
+	tp.ctx.WithLock(func() {
+		html = C.gomupdf_stext_page_to_html(tp.ctx.ctx, tp.page)
+	})
+	if html == nil {
+		return ""
+	}
+	defer C.free(unsafe.Pointer(html))
+	return C.GoString(html)
+}
+
+// XML returns the text page content as XML.
+func (tp *TextPage) XML() string {
+	if tp.page == nil || tp.ctx == nil {
+		return ""
+	}
+	var xml *C.char
+	tp.ctx.WithLock(func() {
+		xml = C.gomupdf_stext_page_to_xml(tp.ctx.ctx, tp.page)
+	})
+	if xml == nil {
+		return ""
+	}
+	defer C.free(unsafe.Pointer(xml))
+	return C.GoString(xml)
+}
+
+// XHTML returns the text page content as XHTML.
+func (tp *TextPage) XHTML() string {
+	if tp.page == nil || tp.ctx == nil {
+		return ""
+	}
+	var xhtml *C.char
+	tp.ctx.WithLock(func() {
+		xhtml = C.gomupdf_stext_page_to_xhtml(tp.ctx.ctx, tp.page)
+	})
+	if xhtml == nil {
+		return ""
+	}
+	defer C.free(unsafe.Pointer(xhtml))
+	return C.GoString(xhtml)
+}
+
+// JSON returns the text page content as JSON.
+func (tp *TextPage) JSON() string {
+	if tp.page == nil || tp.ctx == nil {
+		return ""
+	}
+	var json *C.char
+	tp.ctx.WithLock(func() {
+		json = C.gomupdf_stext_page_to_json(tp.ctx.ctx, tp.page)
+	})
+	if json == nil {
+		return ""
+	}
+	defer C.free(unsafe.Pointer(json))
+	return C.GoString(json)
+}
+
+// CharFont returns the font name of a character.
+func (tp *TextPage) CharFont(ch *C.fz_stext_char) string {
+	if ch == nil || tp.ctx == nil {
+		return ""
+	}
+	var name *C.char
+	tp.ctx.WithLock(func() {
+		name = C.gomupdf_stext_char_font(tp.ctx.ctx, ch)
+	})
+	if name == nil {
+		return ""
+	}
+	return C.GoString(name)
+}
+
+// CharFlags returns the flags of a character.
+func (tp *TextPage) CharFlags(ch *C.fz_stext_char) int {
+	if ch == nil || tp.ctx == nil {
+		return 0
+	}
+	var flags C.int
+	tp.ctx.WithLock(func() {
+		flags = C.gomupdf_stext_char_flags(tp.ctx.ctx, ch)
+	})
+	return int(flags)
+}
