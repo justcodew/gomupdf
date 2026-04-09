@@ -1857,13 +1857,25 @@ int gomupdf_pdf_xref_is_stream(fz_context *ctx, fz_document *doc, int xref) {
     return result;
 }
 
-// Embedded Files
+// Embedded Files - 通过 Names 字典迭代
 int gomupdf_pdf_embedded_file_count(fz_context *ctx, fz_document *doc) {
     if (!ctx || !doc) return 0;
     pdf_document *pdf = pdf_document_from_fz_document(ctx, doc);
     if (!pdf) return 0;
     int count = 0;
-    fz_try(ctx) { count = pdf_count_embedded_files(ctx, pdf); }
+    fz_try(ctx) {
+        pdf_obj *names = pdf_dict_get(ctx, pdf_trailer(ctx, pdf), PDF_NAME(Names));
+        if (names) {
+            pdf_obj *ef = pdf_dict_get(ctx, names, PDF_NAME(EmbeddedFiles));
+            if (ef) {
+                pdf_obj *narray = pdf_dict_get(ctx, ef, PDF_NAME(Names));
+                if (narray && pdf_is_array(ctx, narray)) {
+                    /* Names 数组格式: [name1, dict1, name2, dict2, ...] */
+                    count = pdf_array_len(ctx, narray) / 2;
+                }
+            }
+        }
+    }
     fz_catch(ctx) {}
     return count;
 }
@@ -1874,13 +1886,21 @@ const char *gomupdf_pdf_embedded_file_name(fz_context *ctx, fz_document *doc, in
     if (!pdf) return "";
     static __thread char buf[512];
     fz_try(ctx) {
-        pdf_obj *fs = pdf_load_embedded_file_n(ctx, pdf, idx);
-        if (fs) {
-            const char *name = pdf_dict_get_text_string(ctx, fs, PDF_NAME(F));
-            if (name) snprintf(buf, sizeof(buf), "%s", name);
-            else buf[0] = 0;
-            pdf_drop_obj(ctx, fs);
-        } else { buf[0] = 0; }
+        pdf_obj *names = pdf_dict_get(ctx, pdf_trailer(ctx, pdf), PDF_NAME(Names));
+        if (names) {
+            pdf_obj *ef = pdf_dict_get(ctx, names, PDF_NAME(EmbeddedFiles));
+            if (ef) {
+                pdf_obj *narray = pdf_dict_get(ctx, ef, PDF_NAME(Names));
+                if (narray && pdf_is_array(ctx, narray)) {
+                    pdf_obj *name = pdf_array_get(ctx, narray, idx * 2);
+                    if (name) {
+                        const char *s = pdf_to_text_string(ctx, name);
+                        if (s) snprintf(buf, sizeof(buf), "%s", s);
+                        else buf[0] = 0;
+                    } else buf[0] = 0;
+                } else buf[0] = 0;
+            } else buf[0] = 0;
+        } else buf[0] = 0;
     }
     fz_catch(ctx) { buf[0] = 0; }
     return buf;
@@ -1893,12 +1913,24 @@ unsigned char *gomupdf_pdf_embedded_file_get(fz_context *ctx, fz_document *doc, 
     unsigned char *result = NULL;
     *out_len = 0;
     fz_try(ctx) {
-        fz_buffer *buf = pdf_load_embedded_file_contents_n(ctx, pdf, idx);
-        if (buf) {
-            *out_len = buf->len;
-            result = (unsigned char *)malloc(buf->len);
-            if (result) memcpy(result, buf->data, buf->len);
-            fz_drop_buffer(ctx, buf);
+        pdf_obj *names = pdf_dict_get(ctx, pdf_trailer(ctx, pdf), PDF_NAME(Names));
+        if (names) {
+            pdf_obj *ef = pdf_dict_get(ctx, names, PDF_NAME(EmbeddedFiles));
+            if (ef) {
+                pdf_obj *narray = pdf_dict_get(ctx, ef, PDF_NAME(Names));
+                if (narray && pdf_is_array(ctx, narray)) {
+                    pdf_obj *filespec = pdf_array_get(ctx, narray, idx * 2 + 1);
+                    if (filespec) {
+                        fz_buffer *buf = pdf_load_embedded_file_contents(ctx, filespec);
+                        if (buf) {
+                            *out_len = buf->len;
+                            result = (unsigned char *)malloc(buf->len);
+                            if (result) memcpy(result, buf->data, buf->len);
+                            fz_drop_buffer(ctx, buf);
+                        }
+                    }
+                }
+            }
         }
     }
     fz_catch(ctx) { if (result) { free(result); result = NULL; } *out_len = 0; }
@@ -1913,7 +1945,7 @@ int gomupdf_pdf_add_embedded_file(fz_context *ctx, fz_document *doc,
     fz_try(ctx) {
         fz_buffer *buf = fz_new_buffer_from_data(ctx, (unsigned char *)data, len);
         pdf_add_embedded_file(ctx, pdf, filename, mimetype ? mimetype : "application/octet-stream",
-            buf, 0, time(NULL));
+            buf, 0, time(NULL), 0);
         fz_drop_buffer(ctx, buf);
     }
     fz_catch(ctx) { return -1; }
