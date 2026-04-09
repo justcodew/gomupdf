@@ -10,6 +10,7 @@ package cgo
 import "C"
 import (
 	"errors"
+	"fmt"
 	"unsafe"
 )
 
@@ -66,6 +67,21 @@ func NewPixmap(ctx *Context, width, height int) (*Pixmap, error) {
 
 	// Note: No SetFinalizer - caller must explicitly call Destroy()
 	return p, nil
+}
+
+// NewPixmapFromImage creates a pixmap from an fz_image.
+func NewPixmapFromImage(ctx *Context, img *C.fz_image) (*Pixmap, error) {
+	if ctx == nil || img == nil {
+		return nil, errors.New("nil context or image")
+	}
+	var pix *C.fz_pixmap
+	ctx.WithLock(func() {
+		pix = C.gomupdf_image_get_pixmap(ctx.ctx, img)
+	})
+	if pix == nil {
+		return nil, errors.New("failed to get pixmap from image")
+	}
+	return &Pixmap{ctx: ctx, pix: pix}, nil
 }
 
 // Destroy releases the pixmap.
@@ -179,4 +195,102 @@ func (p *Pixmap) SaveJPEG(filename string, quality int) error {
 	})
 
 	return nil
+}
+
+// PNGBytes returns the pixmap encoded as PNG bytes.
+func (p *Pixmap) PNGBytes() ([]byte, error) {
+	if p.pix == nil || p.ctx == nil {
+		return nil, errors.New("pixmap is nil")
+	}
+	var outData *C.uchar
+	var outLen C.size_t
+	var rc C.int
+	p.ctx.WithLock(func() {
+		rc = C.gomupdf_pixmap_to_png_bytes(p.ctx.ctx, p.pix, &outData, &outLen)
+	})
+	if rc != 0 || outData == nil {
+		return nil, fmt.Errorf("failed to encode PNG: %s", GetLastError())
+	}
+	defer C.free(unsafe.Pointer(outData))
+	return C.GoBytes(unsafe.Pointer(outData), C.int(outLen)), nil
+}
+
+// JPEGBytes returns the pixmap encoded as JPEG bytes.
+func (p *Pixmap) JPEGBytes(quality int) ([]byte, error) {
+	if p.pix == nil || p.ctx == nil {
+		return nil, errors.New("pixmap is nil")
+	}
+	var outData *C.uchar
+	var outLen C.size_t
+	var rc C.int
+	p.ctx.WithLock(func() {
+		rc = C.gomupdf_pixmap_to_jpeg_bytes(p.ctx.ctx, p.pix, C.int(quality), &outData, &outLen)
+	})
+	if rc != 0 || outData == nil {
+		return nil, fmt.Errorf("failed to encode JPEG: %s", GetLastError())
+	}
+	defer C.free(unsafe.Pointer(outData))
+	return C.GoBytes(unsafe.Pointer(outData), C.int(outLen)), nil
+}
+
+// Pixel returns the pixel value at (x, y).
+func (p *Pixmap) Pixel(x, y int) int {
+	if p.pix == nil || p.ctx == nil {
+		return 0
+	}
+	var val C.int
+	p.ctx.WithLock(func() {
+		val = C.gomupdf_pixmap_pixel(p.ctx.ctx, p.pix, C.int(x), C.int(y))
+	})
+	return int(val)
+}
+
+// SetPixel sets the pixel value at (x, y).
+func (p *Pixmap) SetPixel(x, y, val int) {
+	if p.pix == nil || p.ctx == nil {
+		return
+	}
+	p.ctx.WithLock(func() {
+		C.gomupdf_pixmap_set_pixel(p.ctx.ctx, p.pix, C.int(x), C.int(y), C.uint(val))
+	})
+}
+
+// ClearWith clears the pixmap with the given value.
+func (p *Pixmap) ClearWith(value int) {
+	if p.pix == nil || p.ctx == nil {
+		return
+	}
+	p.ctx.WithLock(func() {
+		C.gomupdf_pixmap_clear_with(p.ctx.ctx, p.pix, C.int(value))
+	})
+}
+
+// Invert inverts the pixmap colors.
+func (p *Pixmap) Invert() {
+	if p.pix == nil || p.ctx == nil {
+		return
+	}
+	p.ctx.WithLock(func() {
+		C.gomupdf_pixmap_invert(p.ctx.ctx, p.pix)
+	})
+}
+
+// Gamma applies gamma correction.
+func (p *Pixmap) Gamma(gamma float64) {
+	if p.pix == nil || p.ctx == nil {
+		return
+	}
+	p.ctx.WithLock(func() {
+		C.gomupdf_pixmap_gamma(p.ctx.ctx, p.pix, C.float(gamma))
+	})
+}
+
+// Tint applies tinting with black and white values.
+func (p *Pixmap) Tint(black, white int) {
+	if p.pix == nil || p.ctx == nil {
+		return
+	}
+	p.ctx.WithLock(func() {
+		C.gomupdf_pixmap_tint(p.ctx.ctx, p.pix, C.int(black), C.int(white))
+	})
 }
