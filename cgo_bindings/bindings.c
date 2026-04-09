@@ -1828,18 +1828,23 @@ const char *gomupdf_pdf_xref_get_key(fz_context *ctx, fz_document *doc, int xref
     if (!pdf) return "";
     static __thread char buf[1024];
     fz_try(ctx) {
-        pdf_obj *obj = pdf_xref_get_key(ctx, pdf, xref, key);
-        if (obj) {
-            fz_buffer *b = fz_new_buffer(ctx, 1024);
-            fz_try(ctx) {
-                fz_append_pdf_obj_string(ctx, b, obj);
-                size_t len = b->len;
-                if (len >= sizeof(buf)) len = sizeof(buf) - 1;
-                memcpy(buf, b->data, len);
-                buf[len] = 0;
+        pdf_obj *xobj = pdf_xref_get_object(ctx, pdf, xref);
+        if (xobj && pdf_is_dict(ctx, xobj)) {
+            pdf_obj *val = pdf_dict_gets(ctx, xobj, key);
+            if (val) {
+                fz_buffer *b = fz_new_buffer(ctx, 1024);
+                fz_try(ctx) {
+                    fz_append_pdf_string(ctx, b, val);
+                    size_t len = b->len;
+                    if (len >= sizeof(buf)) len = sizeof(buf) - 1;
+                    memcpy(buf, b->data, len);
+                    buf[len] = 0;
+                }
+                fz_always(ctx) { fz_drop_buffer(ctx, b); }
+                fz_catch(ctx) { buf[0] = 0; }
+            } else {
+                buf[0] = 0;
             }
-            fz_always(ctx) { fz_drop_buffer(ctx, b); }
-            fz_catch(ctx) { buf[0] = 0; }
         } else {
             buf[0] = 0;
         }
@@ -1853,7 +1858,7 @@ int gomupdf_pdf_xref_is_stream(fz_context *ctx, fz_document *doc, int xref) {
     pdf_document *pdf = pdf_document_from_fz_document(ctx, doc);
     if (!pdf) return 0;
     int result = 0;
-    fz_try(ctx) { result = pdf_xref_is_stream(ctx, pdf, xref); }
+    fz_try(ctx) { result = pdf_is_stream(ctx, pdf, pdf_xref_get_object(ctx, pdf, xref)); }
     fz_catch(ctx) {}
     return result;
 }
