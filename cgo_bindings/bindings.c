@@ -1473,12 +1473,9 @@ int gomupdf_pdf_create_link(fz_context *ctx, fz_document *doc, fz_page *page,
     if (!pdf || !pp) return -1;
     fz_try(ctx) {
         fz_rect link_rect = fz_make_rect(x0, y0, x1, y1);
-        if (page_num >= 0) {
-            fz_location loc = fz_make_location(0, page_num);
-            pdf_set_link_dest(ctx, pdf, pdf_create_link(ctx, pp, link_rect, loc));
-        } else if (uri) {
-            pdf_set_link_uri(ctx, pdf, pdf_create_link(ctx, pp, link_rect, uri));
-        }
+        /* pdf_create_link 接受 URI 字符串参数 */
+        fz_link *link = pdf_create_link(ctx, pp, link_rect, uri);
+        if (link) fz_drop_link(ctx, link);
     }
     fz_catch(ctx) { return -1; }
     return 0;
