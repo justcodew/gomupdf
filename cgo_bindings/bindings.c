@@ -1522,7 +1522,7 @@ int gomupdf_pdf_page_write_end(fz_context *ctx, fz_document *doc, fz_page *page,
     if (!pp) return -1;
     fz_try(ctx) {
         /* 将新内容流写入页面对象 */
-        pdf_update_stream(ctx, pdf, pp->obj, contents);
+        pdf_update_stream(ctx, pdf, pp->obj, contents, 0);
     }
     fz_catch(ctx) { return -1; }
     return 0;
