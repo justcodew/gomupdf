@@ -1272,7 +1272,7 @@ int gomupdf_pdf_annot_color(fz_context *ctx, pdf_annot *annot, float *r, float *
     int n = 0;
     float color[4] = {0,0,0,1};
     fz_try(ctx) {
-        n = pdf_annot_color(ctx, annot, color);
+        pdf_annot_color(ctx, annot, &n, color);
     }
     fz_catch(ctx) {}
     if (r) *r = color[0];
