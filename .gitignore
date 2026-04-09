@@ -1,0 +1,30 @@
+# Binaries
+gomupdf_benchmark
+*.exe
+*.dll
+*.so
+*.dylib
+*.out
+
+# Test binary
+*.test
+
+# Output
+*.png
+!examples/**/*.png
+
+# Build
+/vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temp
+/tmp/
