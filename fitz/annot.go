@@ -161,7 +161,12 @@ func (a *Annot) QuadPoints() []Rect {
 	if a.annot == nil {
 		return nil
 	}
-	return a.annot.QuadPoints()
+	cgoRects := a.annot.QuadPoints()
+	rects := make([]Rect, len(cgoRects))
+	for i, r := range cgoRects {
+		rects[i] = Rect{X0: r.X0, Y0: r.Y0, X1: r.X1, Y1: r.Y1}
+	}
+	return rects
 }
 
 // SetQuadPoints sets the annotation's quad points.
