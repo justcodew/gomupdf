@@ -1,3 +1,5 @@
+// Package fitz 提供了对 MuPDF 库的高层 Go 封装，用于处理 PDF 和其他文档格式。
+// 本文件（image.go）封装了从 PDF 页面中提取图像信息及像素数据的功能。
 package fitz
 
 import (
@@ -6,40 +8,40 @@ import (
 	cgo_bindings "github.com/go-pymupdf/gomupdf/cgo_bindings"
 )
 
-// ImageInfo represents information about an image in a PDF.
+// ImageInfo 表示 PDF 页面中图像的元数据信息。
 type ImageInfo struct {
-	Number     int
-	Bbox       Rect
-	Matrix     Matrix
-	Width      int
-	Height     int
-	Colorspace string
-	N          int
-	Xres       int
-	Yres       int
-	BPC        int
-	Size       int
-	HasMask    bool
-	Digest     []byte
+	Number     int    // 图像编号
+	Bbox       Rect   // 图像在页面上的边界矩形
+	Matrix     Matrix // 图像变换矩阵
+	Width      int    // 图像宽度（像素）
+	Height     int    // 图像高度（像素）
+	Colorspace string // 颜色空间名称
+	N          int    // 颜色分量数
+	Xres       int    // 水平分辨率（DPI）
+	Yres       int    // 垂直分辨率（DPI）
+	BPC        int    // 每个颜色分量的位数
+	Size       int    // 图像数据大小（字节）
+	HasMask    bool   // 是否包含遮罩
+	Digest     []byte // 图像数据摘要
 }
 
-// Image represents an extracted image with its pixel data.
+// Image 表示从 PDF 中提取的图像，包含像素数据。
 type Image struct {
-	Width      int
-	Height     int
-	N          int
-	BPC        int
-	Colorspace string
-	Samples    []byte
+	Width      int    // 图像宽度（像素）
+	Height     int    // 图像高度（像素）
+	N          int    // 颜色分量数
+	BPC        int    // 每个颜色分量的位数
+	Colorspace string // 颜色空间名称
+	Samples    []byte // 原始像素数据
 }
 
-// GetImages returns a list of image information on the page.
+// GetImages 返回页面上所有图像的信息列表。
 func (p *Page) GetImages() ([]ImageInfo, error) {
 	if p.page == nil {
 		return nil, fmt.Errorf("page is nil")
 	}
 
-	// Use structured text page to find image blocks
+	// 使用结构化文本页面查找图像块
 	stextPage, err := cgo_bindings.NewTextPage(p.page)
 	if err != nil {
 		return nil, err
@@ -54,7 +56,7 @@ func (p *Page) GetImages() ([]ImageInfo, error) {
 		if block == nil {
 			continue
 		}
-		if stextPage.BlockType(block) != 1 { // Skip non-image blocks
+		if stextPage.BlockType(block) != 1 { // 跳过非图像块
 			continue
 		}
 
@@ -68,7 +70,7 @@ func (p *Page) GetImages() ([]ImageInfo, error) {
 	return images, nil
 }
 
-// ExtractImage extracts image pixel data from a text block.
+// ExtractImage 从指定文本块中提取图像的像素数据。
 func (p *Page) ExtractImage(blockIdx int) (*Image, error) {
 	if p.page == nil {
 		return nil, fmt.Errorf("page is nil")
@@ -88,7 +90,7 @@ func (p *Page) ExtractImage(blockIdx int) (*Image, error) {
 		return nil, fmt.Errorf("block %d is not an image block", blockIdx)
 	}
 
-	// Get the image from the block and render to pixmap
+	// 从块中获取图像并渲染为像素图
 	img := cgo_bindings.BlockGetImage(p.ctx, block)
 	if img == nil {
 		return nil, fmt.Errorf("failed to get image from block")
@@ -116,8 +118,8 @@ func (p *Page) ExtractImage(blockIdx int) (*Image, error) {
 	}, nil
 }
 
-// GetImageXObjects returns a list of XObject images on the page.
+// GetImageXObjects 返回页面中 XObject 图像的列表（尚未实现）。
 func (p *Page) GetImageXObjects() ([]ImageInfo, error) {
-	// TODO: implement XObject enumeration from page resources
+	// TODO: 实现 XObject 枚举
 	return nil, fmt.Errorf("not yet implemented")
 }

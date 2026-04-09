@@ -1,3 +1,18 @@
+// Package cgo 提供对 MuPDF C 库的 CGO 绑定，封装 PDF 文档的底层操作。
+//
+// 本文件（widget.go）包含 PDF 表单控件（Widget）的 CGO 封装函数，涵盖：
+//   - 控件遍历（FirstWidget、Next）
+//   - 控件类型判断（Type）
+//   - 字段名与值读写（FieldName、FieldValue、SetFieldValue）
+//   - 字段标志读写（FieldFlags、SetFieldFlags）
+//   - 复选框操作（IsChecked、Toggle）
+//
+// CGO 模式说明：
+//   - Widget 内部包装 C.pdf_annot 指针（MuPDF 将表单控件视为一种特殊标注）
+//   - 所有 MuPDF 调用均在 ctx.WithLock 回调中执行，保证线程安全
+//   - Go 字符串通过 C.CString 转换，通过 defer C.free(unsafe.Pointer(...)) 释放
+//   - C 端返回的字符串通过 C.GoString 转换为 Go string
+//   - C.int 通过 int() 转换为 Go int
 package cgo
 
 /*
@@ -14,23 +29,23 @@ import (
 	"unsafe"
 )
 
-// Widget represents a PDF form widget (wraps pdf_annot as widget).
+// Widget 表示 PDF 表单中的一个控件（内部包装 C.pdf_annot，MuPDF 将控件视为特殊标注）。
 type Widget struct {
-	ctx    *Context
-	widget *C.pdf_annot
-	doc    *C.fz_document
+	ctx    *Context         // MuPDF 上下文
+	widget *C.pdf_annot    // C 端 pdf_annot 指针（作为控件使用）
+	doc    *C.fz_document  // 所属文档指针
 }
 
-// WidgetType constants.
+// WidgetType 常量定义 PDF 表单控件的类型。
 const (
-	WidgetText     = 0
-	WidgetCheckBox = 1
-	WidgetRadio    = 2
-	WidgetList     = 3
-	WidgetChoice   = 4
+	WidgetText     = 0 // 文本输入框
+	WidgetCheckBox = 1 // 复选框
+	WidgetRadio    = 2 // 单选按钮
+	WidgetList     = 3 // 列表框
+	WidgetChoice   = 4 // 下拉选择框
 )
 
-// FirstWidget returns the first widget on a page.
+// FirstWidget 返回页面上的第一个表单控件。如果没有控件则返回 nil。
 func FirstWidget(ctx *Context, doc *C.fz_document, page *C.fz_page) *Widget {
 	if ctx == nil || doc == nil || page == nil {
 		return nil
@@ -45,7 +60,7 @@ func FirstWidget(ctx *Context, doc *C.fz_document, page *C.fz_page) *Widget {
 	return &Widget{ctx: ctx, widget: w, doc: doc}
 }
 
-// Next returns the next widget.
+// Next 返回当前控件的下一个控件（遍历链表）。如果没有更多控件则返回 nil。
 func (w *Widget) Next() *Widget {
 	if w.widget == nil || w.ctx == nil {
 		return nil
@@ -60,7 +75,7 @@ func (w *Widget) Next() *Widget {
 	return &Widget{ctx: w.ctx, widget: next, doc: w.doc}
 }
 
-// Type returns the widget type.
+// Type 返回控件的类型（对应 WidgetType 常量）。
 func (w *Widget) Type() int {
 	if w.widget == nil || w.ctx == nil {
 		return -1
@@ -72,7 +87,7 @@ func (w *Widget) Type() int {
 	return int(typ)
 }
 
-// FieldName returns the widget field name.
+// FieldName 返回控件的字段名称。
 func (w *Widget) FieldName() string {
 	if w.widget == nil || w.ctx == nil {
 		return ""
@@ -84,7 +99,7 @@ func (w *Widget) FieldName() string {
 	return C.GoString(s)
 }
 
-// FieldValue returns the widget field value.
+// FieldValue 返回控件的字段值。
 func (w *Widget) FieldValue() string {
 	if w.widget == nil || w.ctx == nil {
 		return ""
@@ -96,7 +111,8 @@ func (w *Widget) FieldValue() string {
 	return C.GoString(s)
 }
 
-// SetFieldValue sets the widget field value.
+// SetFieldValue 设置控件的字段值。
+// Go 字符串通过 C.CString 转换，使用后通过 defer C.free(unsafe.Pointer(...)) 释放。
 func (w *Widget) SetFieldValue(value string) error {
 	if w.widget == nil || w.ctx == nil {
 		return errors.New("widget is nil")
@@ -113,7 +129,7 @@ func (w *Widget) SetFieldValue(value string) error {
 	return nil
 }
 
-// FieldFlags returns the widget field flags.
+// FieldFlags 返回控件的字段标志位。
 func (w *Widget) FieldFlags() int {
 	if w.widget == nil || w.ctx == nil {
 		return 0
@@ -125,7 +141,7 @@ func (w *Widget) FieldFlags() int {
 	return int(flags)
 }
 
-// SetFieldFlags sets the widget field flags.
+// SetFieldFlags 设置控件的字段标志位。Go int 通过 C.int() 转换传入 C 端。
 func (w *Widget) SetFieldFlags(flags int) error {
 	if w.widget == nil || w.ctx == nil {
 		return errors.New("widget is nil")
@@ -140,7 +156,7 @@ func (w *Widget) SetFieldFlags(flags int) error {
 	return nil
 }
 
-// IsChecked returns whether a checkbox widget is checked.
+// IsChecked 返回复选框控件是否被勾选。C.int 通过 != 0 转换为 Go bool。
 func (w *Widget) IsChecked() bool {
 	if w.widget == nil || w.ctx == nil {
 		return false
@@ -152,7 +168,7 @@ func (w *Widget) IsChecked() bool {
 	return checked != 0
 }
 
-// Toggle toggles a checkbox widget.
+// Toggle 切换复选框控件的勾选状态。
 func (w *Widget) Toggle() error {
 	if w.widget == nil || w.ctx == nil {
 		return errors.New("widget is nil")

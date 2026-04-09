@@ -1,3 +1,5 @@
+// Package fitz 提供了对 MuPDF 库的高层 Go 封装，用于处理 PDF 和其他文档格式。
+// 本文件（annot.go）封装了 PDF 注释的类型常量及其增删改查操作。
 package fitz
 
 import (
@@ -6,46 +8,46 @@ import (
 	cgo_bindings "github.com/go-pymupdf/gomupdf/cgo_bindings"
 )
 
-// Annot represents a PDF annotation.
+// Annot 表示一个 PDF 注释对象，封装了 MuPDF 的 Annot 指针。
 type Annot struct {
-	ctx  *cgo_bindings.Context
-	annot *cgo_bindings.Annot
+	ctx   *cgo_bindings.Context  // MuPDF 上下文
+	annot *cgo_bindings.Annot    // MuPDF 注释指针
 }
 
-// AnnotType represents the type of annotation.
+// AnnotType 表示 PDF 注释的类型。
 type AnnotType int
 
 const (
-	AnnotText           AnnotType = 0
-	AnnotLink           AnnotType = 1
-	AnnotFreeText       AnnotType = 2
-	AnnotLine           AnnotType = 3
-	AnnotSquare         AnnotType = 4
-	AnnotCircle         AnnotType = 5
-	AnnotPolygon        AnnotType = 6
-	AnnotPolyLine       AnnotType = 7
-	AnnotHighlight      AnnotType = 8
-	AnnotUnderline      AnnotType = 9
-	AnnotSquiggly       AnnotType = 10
-	AnnotStrikeOut      AnnotType = 11
-	AnnotRedact         AnnotType = 12
-	AnnotStamp          AnnotType = 13
-	AnnotCaret          AnnotType = 14
-	AnnotInk            AnnotType = 15
-	AnnotPopup          AnnotType = 16
-	AnnotFileAttachment AnnotType = 17
-	AnnotSound          AnnotType = 18
-	AnnotMovie          AnnotType = 19
-	AnnotWidget         AnnotType = 20
-	AnnotScreen         AnnotType = 21
-	AnnotPrinterMark    AnnotType = 22
-	AnnotTrapNet        AnnotType = 23
-	AnnotWatermark      AnnotType = 24
-	Annot3D             AnnotType = 25
-	AnnotProjection     AnnotType = 26
+	AnnotText           AnnotType = 0  // 文本（便签）注释
+	AnnotLink           AnnotType = 1  // 链接注释
+	AnnotFreeText       AnnotType = 2  // 自由文本注释
+	AnnotLine           AnnotType = 3  // 直线注释
+	AnnotSquare         AnnotType = 4  // 矩形注释
+	AnnotCircle         AnnotType = 5  // 圆形注释
+	AnnotPolygon        AnnotType = 6  // 多边形注释
+	AnnotPolyLine       AnnotType = 7  // 折线注释
+	AnnotHighlight      AnnotType = 8  // 高亮注释
+	AnnotUnderline      AnnotType = 9  // 下划线注释
+	AnnotSquiggly       AnnotType = 10 // 波浪线注释
+	AnnotStrikeOut      AnnotType = 11 // 删除线注释
+	AnnotRedact         AnnotType = 12 // 涂黑（修订）注释
+	AnnotStamp          AnnotType = 13 // 图章注释
+	AnnotCaret          AnnotType = 14 // 插入符注释
+	AnnotInk            AnnotType = 15 // 墨迹注释
+	AnnotPopup          AnnotType = 16 // 弹出窗口注释
+	AnnotFileAttachment AnnotType = 17 // 文件附件注释
+	AnnotSound          AnnotType = 18 // 声音注释
+	AnnotMovie          AnnotType = 19 // 影片注释
+	AnnotWidget         AnnotType = 20 // 表单控件注释
+	AnnotScreen         AnnotType = 21 // 屏幕注释
+	AnnotPrinterMark    AnnotType = 22 // 打印标记注释
+	AnnotTrapNet        AnnotType = 23 // 陷印网络注释
+	AnnotWatermark      AnnotType = 24 // 水印注释
+	Annot3D             AnnotType = 25 // 3D 注释
+	AnnotProjection     AnnotType = 26 // 投影注释
 )
 
-// Type returns the annotation type.
+// Type 返回注释的类型。
 func (a *Annot) Type() AnnotType {
 	if a.annot == nil {
 		return -1
@@ -53,7 +55,7 @@ func (a *Annot) Type() AnnotType {
 	return AnnotType(a.annot.Type())
 }
 
-// Rect returns the annotation rectangle.
+// Rect 返回注释的边界矩形。
 func (a *Annot) Rect() Rect {
 	if a.annot == nil {
 		return Rect{}
@@ -62,12 +64,12 @@ func (a *Annot) Rect() Rect {
 	return Rect{X0: x0, Y0: y0, X1: x1, Y1: y1}
 }
 
-// SetRect sets the annotation rectangle.
+// SetRect 设置注释的边界矩形。
 func (a *Annot) SetRect(r Rect) error {
 	return a.annot.SetRect(r.X0, r.Y0, r.X1, r.Y1)
 }
 
-// Contents returns the annotation text content.
+// Contents 返回注释的文本内容。
 func (a *Annot) Contents() string {
 	if a.annot == nil {
 		return ""
@@ -75,12 +77,12 @@ func (a *Annot) Contents() string {
 	return a.annot.Contents()
 }
 
-// SetContents sets the annotation text content.
+// SetContents 设置注释的文本内容。
 func (a *Annot) SetContents(text string) error {
 	return a.annot.SetContents(text)
 }
 
-// Color returns the annotation color as RGBA.
+// Color 返回注释的颜色（RGBA 格式）。
 func (a *Annot) Color() Color {
 	if a.annot == nil {
 		return Color{}
@@ -89,12 +91,12 @@ func (a *Annot) Color() Color {
 	return Color{R: r, G: g, B: b, A: alpha}
 }
 
-// SetColor sets the annotation color.
+// SetColor 设置注释的颜色。
 func (a *Annot) SetColor(c Color) error {
 	return a.annot.SetColor(c.R, c.G, c.B, c.A)
 }
 
-// Opacity returns the annotation opacity.
+// Opacity 返回注释的不透明度（0.0~1.0）。
 func (a *Annot) Opacity() float64 {
 	if a.annot == nil {
 		return 1.0
@@ -102,12 +104,12 @@ func (a *Annot) Opacity() float64 {
 	return a.annot.Opacity()
 }
 
-// SetOpacity sets the annotation opacity.
+// SetOpacity 设置注释的不透明度。
 func (a *Annot) SetOpacity(opacity float64) error {
 	return a.annot.SetOpacity(opacity)
 }
 
-// Flags returns the annotation flags.
+// Flags 返回注释的标志位。
 func (a *Annot) Flags() int {
 	if a.annot == nil {
 		return 0
@@ -115,12 +117,12 @@ func (a *Annot) Flags() int {
 	return a.annot.Flags()
 }
 
-// SetFlags sets the annotation flags.
+// SetFlags 设置注释的标志位。
 func (a *Annot) SetFlags(flags int) error {
 	return a.annot.SetFlags(flags)
 }
 
-// Border returns the annotation border width.
+// Border 返回注释的边框宽度。
 func (a *Annot) Border() float64 {
 	if a.annot == nil {
 		return 0
@@ -128,12 +130,12 @@ func (a *Annot) Border() float64 {
 	return a.annot.Border()
 }
 
-// SetBorder sets the annotation border width.
+// SetBorder 设置注释的边框宽度。
 func (a *Annot) SetBorder(width float64) error {
 	return a.annot.SetBorder(width)
 }
 
-// Title returns the annotation title.
+// Title 返回注释的标题。
 func (a *Annot) Title() string {
 	if a.annot == nil {
 		return ""
@@ -141,22 +143,22 @@ func (a *Annot) Title() string {
 	return a.annot.Title()
 }
 
-// SetTitle sets the annotation title.
+// SetTitle 设置注释的标题。
 func (a *Annot) SetTitle(title string) error {
 	return a.annot.SetTitle(title)
 }
 
-// Update saves changes to the annotation.
+// Update 将注释的修改保存到文档中。
 func (a *Annot) Update() error {
 	return a.annot.Update()
 }
 
-// Delete removes the annotation from the page.
+// Delete 从页面上删除该注释。
 func (a *Annot) Delete() error {
 	return a.annot.Delete()
 }
 
-// QuadPoints returns the annotation's quad points.
+// QuadPoints 返回注释的四边形点列表，用于标记注释覆盖的文本区域。
 func (a *Annot) QuadPoints() []Rect {
 	if a.annot == nil {
 		return nil
@@ -169,7 +171,7 @@ func (a *Annot) QuadPoints() []Rect {
 	return rects
 }
 
-// SetQuadPoints sets the annotation's quad points.
+// SetQuadPoints 设置注释的四边形点列表。
 func (a *Annot) SetQuadPoints(quads []Rect) error {
 	cgoQuads := make([]cgo_bindings.Rect, len(quads))
 	for i, q := range quads {
@@ -178,7 +180,7 @@ func (a *Annot) SetQuadPoints(quads []Rect) error {
 	return a.annot.SetQuadPoints(cgoQuads)
 }
 
-// String returns a string representation.
+// String 返回注释的字符串描述信息。
 func (a *Annot) String() string {
 	if a.annot == nil {
 		return "Annot(<nil>)"

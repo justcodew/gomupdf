@@ -1,3 +1,18 @@
+// Package cgo 提供对 MuPDF C 库的 CGO 绑定，封装 PDF 文档的底层操作。
+//
+// 本文件（font.go）包含字体相关的 CGO 封装函数，涵盖：
+//   - 从文件加载字体（NewFontFromFile）
+//   - 从内存缓冲区加载字体（NewFontFromBuffer）
+//   - 字体销毁（Destroy）
+//   - 字体属性查询（Name、Ascender、Descender）
+//   - 文本测量（MeasureText、GlyphAdvance）
+//
+// CGO 模式说明：
+//   - C.fz_font 是 MuPDF 的字体对象指针
+//   - Go 字符串通过 C.CString 转换为 *C.char，使用后通过 C.free(unsafe.Pointer(...)) 释放
+//   - Go []byte 通过 (*C.char)(unsafe.Pointer(&data[0])) 获取首元素地址传给 C 端
+//   - C.float() 用于将 Go float64 转为 C 端的 float 类型
+//   - 所有 MuPDF 调用均在 ctx.WithLock 回调中执行，保证线程安全
 package cgo
 
 /*
@@ -14,13 +29,14 @@ import (
 	"unsafe"
 )
 
-// Font represents a loaded font.
+// Font 表示一个已加载的字体对象，封装 MuPDF 的 fz_font 指针。
 type Font struct {
-	ctx  *Context
-	font *C.fz_font
+	ctx  *Context      // MuPDF 上下文
+	font *C.fz_font   // C 端 fz_font 指针
 }
 
-// NewFontFromFile loads a font from a file.
+// NewFontFromFile 从文件路径加载字体。index 为字体集合中的子字体索引（通常为 0）。
+// Go 文件名通过 C.CString 转换，使用后通过 defer C.free 释放。
 func NewFontFromFile(ctx *Context, filename string, index int) (*Font, error) {
 	if ctx == nil || filename == "" {
 		return nil, errors.New("nil context or empty filename")
@@ -37,7 +53,9 @@ func NewFontFromFile(ctx *Context, filename string, index int) (*Font, error) {
 	return &Font{ctx: ctx, font: font}, nil
 }
 
-// NewFontFromBuffer loads a font from a byte buffer.
+// NewFontFromBuffer 从内存缓冲区加载字体。
+// data 为字体文件的原始字节内容，通过 unsafe.Pointer(&data[0]) 获取底层内存地址传给 C 端。
+// 注意：调用期间 data 不能被 GC 回收，C 端会在内部拷贝数据。
 func NewFontFromBuffer(ctx *Context, data []byte, index int) (*Font, error) {
 	if ctx == nil || len(data) == 0 {
 		return nil, errors.New("nil context or empty data")
@@ -52,7 +70,7 @@ func NewFontFromBuffer(ctx *Context, data []byte, index int) (*Font, error) {
 	return &Font{ctx: ctx, font: font}, nil
 }
 
-// Destroy releases the font.
+// Destroy 释放字体的 C 端资源。调用后 Font 不可再使用。
 func (f *Font) Destroy() {
 	if f.font != nil && f.ctx != nil {
 		f.ctx.WithLock(func() {
@@ -62,7 +80,7 @@ func (f *Font) Destroy() {
 	}
 }
 
-// Name returns the font name.
+// Name 返回字体名称。通过 C.GoString 将 C 端返回的字符串指针转换为 Go string。
 func (f *Font) Name() string {
 	if f.font == nil || f.ctx == nil {
 		return ""
@@ -74,7 +92,7 @@ func (f *Font) Name() string {
 	return C.GoString(name)
 }
 
-// Ascender returns the font ascender.
+// Ascender 返回字体的上升线（ascender）高度。C.float 通过 float64() 转为 Go 类型。
 func (f *Font) Ascender() float64 {
 	if f.font == nil || f.ctx == nil {
 		return 0
@@ -86,7 +104,7 @@ func (f *Font) Ascender() float64 {
 	return float64(a)
 }
 
-// Descender returns the font descender.
+// Descender 返回字体的下降线（descender）高度。
 func (f *Font) Descender() float64 {
 	if f.font == nil || f.ctx == nil {
 		return 0
@@ -98,7 +116,8 @@ func (f *Font) Descender() float64 {
 	return float64(d)
 }
 
-// MeasureText measures the width of text rendered with this font.
+// MeasureText 测量指定文本在给定字号下的渲染宽度。
+// text 通过 C.CString 转换为 C 字符串，size 通过 C.float() 转换为 C 浮点数。
 func (f *Font) MeasureText(text string, size float64) float64 {
 	if f.font == nil || f.ctx == nil || text == "" {
 		return 0
@@ -112,7 +131,8 @@ func (f *Font) MeasureText(text string, size float64) float64 {
 	return float64(w)
 }
 
-// GlyphAdvance returns the advance width of a glyph.
+// GlyphAdvance 返回指定字形（glyph）的前进宽度。
+// glyph 为字形索引，size 为字号大小。
 func (f *Font) GlyphAdvance(glyph int, size float64) float64 {
 	if f.font == nil || f.ctx == nil {
 		return 0

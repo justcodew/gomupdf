@@ -1,3 +1,5 @@
+// Package fitz 提供了对 MuPDF 库的高层 Go 封装，用于处理 PDF 和其他文档格式。
+// 本文件（page.go）封装了页面级操作：渲染、注释、链接、搜索、页面框及表单控件。
 package fitz
 
 import (
@@ -6,15 +8,15 @@ import (
 	cgo_bindings "github.com/go-pymupdf/gomupdf/cgo_bindings"
 )
 
-// Page represents a page in a document.
+// Page 表示文档中的一个页面，提供渲染、注释、链接等操作。
 type Page struct {
-	ctx   *cgo_bindings.Context
-	page  *cgo_bindings.Page
-	doc   *Document
-	index int // page number (0-indexed)
+	ctx   *cgo_bindings.Context  // MuPDF 上下文
+	page  *cgo_bindings.Page     // MuPDF 页面指针
+	doc   *Document              // 所属文档
+	index int                    // 页码（从 0 开始）
 }
 
-// Rect returns the page bounding rectangle.
+// Rect 返回页面的边界矩形。
 func (p *Page) Rect() Rect {
 	if p.page == nil {
 		return Rect{}
@@ -23,7 +25,7 @@ func (p *Page) Rect() Rect {
 	return Rect{X0: x0, Y0: y0, X1: x1, Y1: y1}
 }
 
-// Rotation returns the page rotation in degrees.
+// Rotation 返回页面的旋转角度（度数）。
 func (p *Page) Rotation() int {
 	if p.page == nil || p.doc == nil {
 		return 0
@@ -37,7 +39,7 @@ func (p *Page) Rotation() int {
 	return p.page.Rotation()
 }
 
-// SetRotation sets the page rotation.
+// SetRotation 设置页面的旋转角度。
 func (p *Page) SetRotation(rotation int) error {
 	if p.page == nil || p.doc == nil {
 		return fmt.Errorf("page is nil")
@@ -45,12 +47,12 @@ func (p *Page) SetRotation(rotation int) error {
 	return cgo_bindings.SetPageRotation(p.ctx, p.doc.doc.Doc, p.index, rotation)
 }
 
-// Number returns the page number (0-indexed).
+// Number 返回页面的页码（从 0 开始）。
 func (p *Page) Number() int {
 	return p.index
 }
 
-// Pixmap returns a pixmap rendering of the page.
+// Pixmap 根据给定的变换矩阵渲染页面，返回像素图对象。alpha 控制是否包含透明通道。
 func (p *Page) Pixmap(matrix Matrix, alpha bool) (*Pixmap, error) {
 	if p.page == nil || p.ctx == nil {
 		return nil, fmt.Errorf("page is nil")
@@ -68,7 +70,7 @@ func (p *Page) Pixmap(matrix Matrix, alpha bool) (*Pixmap, error) {
 	}, nil
 }
 
-// Annots returns a list of annotations on the page.
+// Annots 返回页面上所有注释的列表。
 func (p *Page) Annots() ([]*Annot, error) {
 	if p.page == nil || p.doc == nil {
 		return nil, fmt.Errorf("page is nil")
@@ -83,7 +85,7 @@ func (p *Page) Annots() ([]*Annot, error) {
 	return annots, nil
 }
 
-// AddAnnot creates and adds a new annotation to the page.
+// AddAnnot 在页面上创建并添加指定类型的新注释。
 func (p *Page) AddAnnot(annotType int) (*Annot, error) {
 	if p.page == nil || p.doc == nil {
 		return nil, fmt.Errorf("page is nil")
@@ -95,7 +97,7 @@ func (p *Page) AddAnnot(annotType int) (*Annot, error) {
 	return &Annot{ctx: p.ctx, annot: annot}, nil
 }
 
-// AddHighlightAnnot adds a highlight annotation with the given quads.
+// AddHighlightAnnot 添加高亮注释，quads 指定高亮区域。
 func (p *Page) AddHighlightAnnot(quads []Rect) (*Annot, error) {
 	annot, err := p.AddAnnot(int(AnnotHighlight))
 	if err != nil {
@@ -115,7 +117,7 @@ func (p *Page) AddHighlightAnnot(quads []Rect) (*Annot, error) {
 	return annot, nil
 }
 
-// AddStrikeoutAnnot adds a strikeout annotation.
+// AddStrikeoutAnnot 添加删除线注释。
 func (p *Page) AddStrikeoutAnnot(quads []Rect) (*Annot, error) {
 	annot, err := p.AddAnnot(int(AnnotStrikeOut))
 	if err != nil {
@@ -132,7 +134,7 @@ func (p *Page) AddStrikeoutAnnot(quads []Rect) (*Annot, error) {
 	return annot, nil
 }
 
-// AddUnderlineAnnot adds an underline annotation.
+// AddUnderlineAnnot 添加下划线注释。
 func (p *Page) AddUnderlineAnnot(quads []Rect) (*Annot, error) {
 	annot, err := p.AddAnnot(int(AnnotUnderline))
 	if err != nil {
@@ -149,7 +151,7 @@ func (p *Page) AddUnderlineAnnot(quads []Rect) (*Annot, error) {
 	return annot, nil
 }
 
-// AddSquigglyAnnot adds a squiggly annotation.
+// AddSquigglyAnnot 添加波浪线注释。
 func (p *Page) AddSquigglyAnnot(quads []Rect) (*Annot, error) {
 	annot, err := p.AddAnnot(int(AnnotSquiggly))
 	if err != nil {
@@ -166,7 +168,7 @@ func (p *Page) AddSquigglyAnnot(quads []Rect) (*Annot, error) {
 	return annot, nil
 }
 
-// AddTextAnnot adds a text (sticky note) annotation.
+// AddTextAnnot 添加文本（便签）注释。
 func (p *Page) AddTextAnnot(point Point, text string) (*Annot, error) {
 	annot, err := p.AddAnnot(int(AnnotText))
 	if err != nil {
@@ -177,7 +179,7 @@ func (p *Page) AddTextAnnot(point Point, text string) (*Annot, error) {
 	return annot, nil
 }
 
-// AddFreeTextAnnot adds a free text annotation.
+// AddFreeTextAnnot 添加自由文本注释。
 func (p *Page) AddFreeTextAnnot(rect Rect, text string) (*Annot, error) {
 	annot, err := p.AddAnnot(int(AnnotFreeText))
 	if err != nil {
@@ -189,7 +191,7 @@ func (p *Page) AddFreeTextAnnot(rect Rect, text string) (*Annot, error) {
 	return annot, nil
 }
 
-// AddRedactAnnot adds a redaction annotation.
+// AddRedactAnnot 添加涂黑（修订）注释。
 func (p *Page) AddRedactAnnot(rect Rect, text string) (*Annot, error) {
 	annot, err := p.AddAnnot(int(AnnotRedact))
 	if err != nil {
@@ -203,7 +205,7 @@ func (p *Page) AddRedactAnnot(rect Rect, text string) (*Annot, error) {
 	return annot, nil
 }
 
-// ApplyRedactions applies all redaction annotations on this page.
+// ApplyRedactions 应用页面上所有涂黑注释，永久移除被涂黑的内容。
 func (p *Page) ApplyRedactions() error {
 	if p.page == nil || p.doc == nil {
 		return fmt.Errorf("page is nil")
@@ -211,10 +213,10 @@ func (p *Page) ApplyRedactions() error {
 	return cgo_bindings.ApplyRedactions(p.ctx, p.doc.doc.Doc, p.page.Page)
 }
 
-// LinkInfo represents a hyperlink on a page.
+// LinkInfo 是页面超链接信息的类型别名，对应 cgo_bindings.LinkInfo。
 type LinkInfo = cgo_bindings.LinkInfo
 
-// GetLinks loads all links from this page.
+// GetLinks 加载页面上的所有超链接。
 func (p *Page) GetLinks() ([]LinkInfo, error) {
 	if p.page == nil {
 		return nil, fmt.Errorf("page is nil")
@@ -222,7 +224,7 @@ func (p *Page) GetLinks() ([]LinkInfo, error) {
 	return cgo_bindings.LoadLinks(p.ctx, p.page)
 }
 
-// AddLink adds a link to the page pointing to a URI.
+// AddLink 在页面的指定区域添加一个指向 URI 的链接。
 func (p *Page) AddLink(rect Rect, uri string) error {
 	if p.page == nil || p.doc == nil {
 		return fmt.Errorf("page is nil")
@@ -231,7 +233,7 @@ func (p *Page) AddLink(rect Rect, uri string) error {
 		rect.X0, rect.Y0, rect.X1, rect.Y1, uri, -1)
 }
 
-// SearchFor searches for text on this page, returning bounding rectangles of matches.
+// SearchFor 在页面中搜索指定文本，返回匹配区域的边界矩形列表。
 func (p *Page) SearchFor(text string, maxHits int) ([]Rect, error) {
 	if p.page == nil {
 		return nil, fmt.Errorf("page is nil")
@@ -255,7 +257,7 @@ func (p *Page) SearchFor(text string, maxHits int) ([]Rect, error) {
 	return rects, nil
 }
 
-// CropBox returns the page crop box.
+// CropBox 返回页面的裁剪框。
 func (p *Page) CropBox() Rect {
 	if p.page == nil || p.doc == nil {
 		return Rect{}
@@ -264,7 +266,7 @@ func (p *Page) CropBox() Rect {
 	return Rect{X0: x0, Y0: y0, X1: x1, Y1: y1}
 }
 
-// SetCropBox sets the page crop box.
+// SetCropBox 设置页面的裁剪框。
 func (p *Page) SetCropBox(r Rect) error {
 	if p.page == nil || p.doc == nil {
 		return fmt.Errorf("page is nil")
@@ -272,7 +274,7 @@ func (p *Page) SetCropBox(r Rect) error {
 	return cgo_bindings.SetPageBox(p.ctx, p.doc.doc.Doc, p.index, "CropBox", r.X0, r.Y0, r.X1, r.Y1)
 }
 
-// MediaBox returns the page media box.
+// MediaBox 返回页面的媒体框。
 func (p *Page) MediaBox() Rect {
 	if p.page == nil || p.doc == nil {
 		return Rect{}
@@ -281,7 +283,7 @@ func (p *Page) MediaBox() Rect {
 	return Rect{X0: x0, Y0: y0, X1: x1, Y1: y1}
 }
 
-// SetMediaBox sets the page media box.
+// SetMediaBox 设置页面的媒体框。
 func (p *Page) SetMediaBox(r Rect) error {
 	if p.page == nil || p.doc == nil {
 		return fmt.Errorf("page is nil")
@@ -289,7 +291,7 @@ func (p *Page) SetMediaBox(r Rect) error {
 	return cgo_bindings.SetPageBox(p.ctx, p.doc.doc.Doc, p.index, "MediaBox", r.X0, r.Y0, r.X1, r.Y1)
 }
 
-// Widgets returns all form widgets on this page.
+// Widgets 返回页面上所有表单控件的列表。
 func (p *Page) Widgets() ([]*Widget, error) {
 	if p.page == nil || p.doc == nil {
 		return nil, fmt.Errorf("page is nil")
@@ -303,7 +305,7 @@ func (p *Page) Widgets() ([]*Widget, error) {
 	return widgets, nil
 }
 
-// String returns a string representation of the page.
+// String 返回页面的字符串描述信息。
 func (p *Page) String() string {
 	if p.page == nil {
 		return "Page(<closed>)"

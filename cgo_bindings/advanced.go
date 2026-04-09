@@ -1,3 +1,20 @@
+// Package cgo 提供对 MuPDF C 库的 CGO 绑定，封装 PDF 文档的底层操作。
+//
+// 本文件（advanced.go）包含 PDF 高级功能的 CGO 封装函数，涵盖：
+//   - 显示列表（DisplayList）：缓存页面绘制命令，支持离线渲染
+//   - 页面框（PageBox）：读写 CropBox、MediaBox 等页面边界
+//   - 页面旋转（SetPageRotation）
+//   - XRef 表操作（XRefLength、XRefGetKey、XRefIsStream）
+//   - 嵌入文件（EmbeddedFileCount、EmbeddedFileName、EmbeddedFileGet、AddEmbeddedFile）
+//   - 链接创建（CreateLink）
+//   - 内容流写入（PageContentBegin、PageContentEnd）
+//
+// CGO 模式说明：
+//   - C.fz_display_list 是 MuPDF 的显示列表类型，用于缓存页面绘制命令
+//   - C.fz_buffer 是 MuPDF 的缓冲区类型，用于内容流写入
+//   - Go []byte 通过 unsafe.Pointer(&data[0]) 获取底层数据指针传给 C 端
+//   - C 端分配的输出缓冲区通过 C.free 或 C.GoBytes + defer C.free 管理
+//   - 所有 MuPDF 调用均在 ctx.WithLock 回调中执行，保证线程安全
 package cgo
 
 /*
@@ -14,13 +31,14 @@ import (
 	"unsafe"
 )
 
-// DisplayList represents a cached display list for a page.
+// DisplayList 表示页面的缓存显示列表，用于离线渲染（无需保留原始页面即可重复渲染）。
 type DisplayList struct {
-	ctx  *Context
-	list *C.fz_display_list
+	ctx  *Context               // MuPDF 上下文
+	list *C.fz_display_list    // C 端 fz_display_list 指针
 }
 
-// NewDisplayList creates a new display list.
+// NewDisplayList 创建一个新的空白显示列表，x0/y0/x1/y1 为其边界矩形。
+// 边界矩形通过 C.fz_rect 结构体传入 C 端。
 func NewDisplayList(ctx *Context, x0, y0, x1, y1 float64) (*DisplayList, error) {
 	if ctx == nil {
 		return nil, errors.New("nil context")
@@ -36,7 +54,8 @@ func NewDisplayList(ctx *Context, x0, y0, x1, y1 float64) (*DisplayList, error) 
 	return &DisplayList{ctx: ctx, list: list}, nil
 }
 
-// RunPageToDisplayList runs a page into a display list.
+// RunPageToDisplayList 将页面内容渲染到显示列表中（记录绘制命令而非直接光栅化）。
+// a,b,c,d,e,f 为仿射变换矩阵的 6 个分量。
 func RunPageToDisplayList(ctx *Context, page *C.fz_page, list *DisplayList, a, b, c, d, e, f float64) error {
 	if ctx == nil || page == nil || list == nil {
 		return errors.New("nil arguments")
@@ -48,7 +67,8 @@ func RunPageToDisplayList(ctx *Context, page *C.fz_page, list *DisplayList, a, b
 	return nil
 }
 
-// GetPixmap renders the display list to a pixmap.
+// GetPixmap 将显示列表渲染为 Pixmap。
+// 使用记录的绘制命令和指定的变换矩阵进行光栅化，alpha 控制是否包含透明通道。
 func (dl *DisplayList) GetPixmap(a, b, c, d, e, f float64, alpha bool) (*Pixmap, error) {
 	if dl.list == nil || dl.ctx == nil {
 		return nil, errors.New("display list is nil")
@@ -68,7 +88,7 @@ func (dl *DisplayList) GetPixmap(a, b, c, d, e, f float64, alpha bool) (*Pixmap,
 	return &Pixmap{ctx: dl.ctx, pix: pix}, nil
 }
 
-// Destroy releases the display list.
+// Destroy 释放显示列表的 C 端资源。调用后 DisplayList 不可再使用。
 func (dl *DisplayList) Destroy() {
 	if dl.list != nil && dl.ctx != nil {
 		dl.ctx.WithLock(func() {
@@ -78,7 +98,8 @@ func (dl *DisplayList) Destroy() {
 	}
 }
 
-// PageBox returns a page box (cropbox, mediabox, etc.).
+// PageBox 返回指定页面的页面框（如 CropBox、MediaBox）。
+// boxType 为框类型名称，目前支持 "CropBox" 和 "MediaBox"。
 func PageBox(ctx *Context, doc *C.fz_document, pageNum int, boxType string) (x0, y0, x1, y1 float64) {
 	if ctx == nil || doc == nil {
 		return 0, 0, 0, 0
@@ -95,7 +116,8 @@ func PageBox(ctx *Context, doc *C.fz_document, pageNum int, boxType string) (x0,
 	return float64(r.x0), float64(r.y0), float64(r.x1), float64(r.y1)
 }
 
-// SetPageBox sets a page box.
+// SetPageBox 设置指定页面的页面框（如 CropBox、MediaBox）。
+// 坐标值通过 C.float() 转换为 C 端浮点数。
 func SetPageBox(ctx *Context, doc *C.fz_document, pageNum int, boxType string, x0, y0, x1, y1 float64) error {
 	if ctx == nil || doc == nil {
 		return errors.New("nil arguments")
@@ -115,7 +137,7 @@ func SetPageBox(ctx *Context, doc *C.fz_document, pageNum int, boxType string, x
 	return nil
 }
 
-// SetPageRotation sets the page rotation.
+// SetPageRotation 设置页面的旋转角度。
 func SetPageRotation(ctx *Context, doc *C.fz_document, pageNum, rotation int) error {
 	if ctx == nil || doc == nil {
 		return errors.New("nil arguments")
@@ -130,7 +152,7 @@ func SetPageRotation(ctx *Context, doc *C.fz_document, pageNum, rotation int) er
 	return nil
 }
 
-// XRefLength returns the XRef table length.
+// XRefLength 返回文档 XRef（交叉引用）表的条目数量。
 func XRefLength(ctx *Context, doc *C.fz_document) int {
 	if ctx == nil || doc == nil {
 		return 0
@@ -142,7 +164,8 @@ func XRefLength(ctx *Context, doc *C.fz_document) int {
 	return int(len)
 }
 
-// XRefGetKey returns the value of a key in an XRef object.
+// XRefGetKey 返回 XRef 对象中指定键的值。
+// Go 字符串 key 通过 C.CString 转换，使用后通过 defer C.free 释放。
 func XRefGetKey(ctx *Context, doc *C.fz_document, xref int, key string) string {
 	if ctx == nil || doc == nil {
 		return ""
@@ -156,7 +179,7 @@ func XRefGetKey(ctx *Context, doc *C.fz_document, xref int, key string) string {
 	return C.GoString(s)
 }
 
-// XRefIsStream returns whether an XRef entry is a stream.
+// XRefIsStream 判断指定 XRef 条目是否为流对象。C.int 通过 != 0 转换为 Go bool。
 func XRefIsStream(ctx *Context, doc *C.fz_document, xref int) bool {
 	if ctx == nil || doc == nil {
 		return false
@@ -168,7 +191,7 @@ func XRefIsStream(ctx *Context, doc *C.fz_document, xref int) bool {
 	return result != 0
 }
 
-// EmbeddedFileCount returns the number of embedded files.
+// EmbeddedFileCount 返回文档中嵌入文件的数量。
 func EmbeddedFileCount(ctx *Context, doc *C.fz_document) int {
 	if ctx == nil || doc == nil {
 		return 0
@@ -180,7 +203,7 @@ func EmbeddedFileCount(ctx *Context, doc *C.fz_document) int {
 	return int(count)
 }
 
-// EmbeddedFileName returns the name of an embedded file.
+// EmbeddedFileName 按索引返回嵌入文件的名称。
 func EmbeddedFileName(ctx *Context, doc *C.fz_document, idx int) string {
 	if ctx == nil || doc == nil {
 		return ""
@@ -192,7 +215,9 @@ func EmbeddedFileName(ctx *Context, doc *C.fz_document, idx int) string {
 	return C.GoString(s)
 }
 
-// EmbeddedFileGet returns the data of an embedded file.
+// EmbeddedFileGet 按索引获取嵌入文件的数据内容。
+// C 端通过输出参数（outData 指针 + outLen 长度）返回数据，
+// Go 侧通过 C.GoBytes 拷贝为 []byte，然后通过 defer C.free 释放 C 端缓冲区。
 func EmbeddedFileGet(ctx *Context, doc *C.fz_document, idx int) ([]byte, error) {
 	if ctx == nil || doc == nil {
 		return nil, errors.New("nil arguments")
@@ -209,7 +234,9 @@ func EmbeddedFileGet(ctx *Context, doc *C.fz_document, idx int) ([]byte, error) 
 	return C.GoBytes(unsafe.Pointer(outData), C.int(outLen)), nil
 }
 
-// AddEmbeddedFile adds an embedded file to the document.
+// AddEmbeddedFile 向文档添加一个嵌入文件。
+// filename 为文件名，mimetype 为 MIME 类型（可为空），data 为文件内容。
+// Go 字符串通过 C.CString 转换，Go []byte 通过 unsafe.Pointer(&data[0]) 获取底层指针。
 func AddEmbeddedFile(ctx *Context, doc *C.fz_document, filename, mimetype string, data []byte) error {
 	if ctx == nil || doc == nil || filename == "" || len(data) == 0 {
 		return errors.New("invalid arguments")
@@ -232,7 +259,8 @@ func AddEmbeddedFile(ctx *Context, doc *C.fz_document, filename, mimetype string
 	return nil
 }
 
-// CreateLink creates a new link on a page.
+// CreateLink 在页面上创建一个新的超链接。
+// x0/y0/x1/y1 为链接区域矩形，uri 为链接地址，pageNum 为目标页码。
 func CreateLink(ctx *Context, doc *C.fz_document, page *C.fz_page, x0, y0, x1, y1 float64, uri string, pageNum int) error {
 	if ctx == nil || doc == nil || page == nil {
 		return errors.New("nil arguments")
@@ -250,7 +278,7 @@ func CreateLink(ctx *Context, doc *C.fz_document, page *C.fz_page, x0, y0, x1, y
 	return nil
 }
 
-// PageContentBegin starts writing page content.
+// PageContentBegin 开始写入页面内容流，返回 fz_buffer 指针用于后续写入。
 func PageContentBegin(ctx *Context, doc *C.fz_document, page *C.fz_page) (*C.fz_buffer, error) {
 	if ctx == nil || doc == nil || page == nil {
 		return nil, errors.New("nil arguments")
@@ -265,7 +293,8 @@ func PageContentBegin(ctx *Context, doc *C.fz_document, page *C.fz_page) (*C.fz_
 	return buf, nil
 }
 
-// PageContentEnd finishes writing page content.
+// PageContentEnd 结束页面内容流的写入，将缓冲区中的内容应用到页面。
+// buf 为 PageContentBegin 返回的 fz_buffer 指针。
 func PageContentEnd(ctx *Context, doc *C.fz_document, page *C.fz_page, buf *C.fz_buffer) error {
 	if ctx == nil || doc == nil || page == nil || buf == nil {
 		return errors.New("nil arguments")

@@ -1,3 +1,5 @@
+// Package fitz 提供了对 MuPDF 库的高层 Go 封装，用于处理 PDF 和其他文档格式。
+// 本文件（text.go）封装了文本提取功能，支持纯文本、HTML、XML、XHTML、JSON 等多种输出格式。
 package fitz
 
 import (
@@ -7,57 +9,57 @@ import (
 	cgo_bindings "github.com/go-pymupdf/gomupdf/cgo_bindings"
 )
 
-// TextBlock represents a block of text with its bounding box.
+// TextBlock 表示一个文本块，包含边界框、文本内容及其下属的行和片段信息。
 type TextBlock struct {
-	Bbox   Rect   // Bounding box of the text
-	Text   string // The text content
-	Number int    // Block number
-	Type   int    // Block type (0=text, 1=image)
-	Lines  []TextLine
+	Bbox   Rect       // 文本块的边界矩形
+	Text   string     // 文本内容
+	Number int        // 块编号
+	Type   int        // 块类型（0=文本，1=图像）
+	Lines  []TextLine // 文本行列表
 }
 
-// TextLine represents a line of text within a block.
+// TextLine 表示文本块中的一行文字。
 type TextLine struct {
-	Bbox  Rect
-	WDir  Point // Writing direction
-	Frags []TextFragment
+	Bbox  Rect           // 行的边界矩形
+	WDir  Point          // 书写方向向量
+	Frags []TextFragment // 文本片段列表
 }
 
-// TextFragment represents a text fragment (typically a word or character).
+// TextFragment 表示一个文本片段（通常对应单个字符）。
 type TextFragment struct {
-	Bbox   Rect
-	Origin Point
-	Font   string
-	Size   float64
-	Color  Color // Text color as RGBA
-	Text   string
+	Bbox   Rect    // 片段的边界矩形
+	Origin Point   // 字符原点（基线位置）
+	Font   string  // 字体名称
+	Size   float64 // 字号
+	Color  Color   // 文本颜色（RGBA）
+	Text   string  // 文本内容
 }
 
-// TextWord represents a word with its bounding box.
+// TextWord 表示一个单词及其边界框。
 type TextWord struct {
-	Bbox     Rect
-	Origin   Point
-	Word     string
-	FontName string
-	FontSize float64
-	Color    Color
-	BlockNum int
-	LineNum  int
-	WordNum  int
+	Bbox     Rect    // 单词的边界矩形
+	Origin   Point   // 单词原点
+	Word     string  // 单词文本
+	FontName string  // 字体名称
+	FontSize float64 // 字号
+	Color    Color   // 文本颜色
+	BlockNum int     // 所属块编号
+	LineNum  int     // 所属行编号
+	WordNum  int     // 单词编号
 }
 
-// Color represents an RGBA color.
+// Color 表示一个 RGBA 颜色值。
 type Color struct {
-	R, G, B, A float64
+	R, G, B, A float64 // 红、绿、蓝、透明度分量（0.0~1.0）
 }
 
-// TextOptions contains options for text extraction.
+// TextOptions 包含文本提取的选项参数。
 type TextOptions struct {
-	// Flags for text extraction (see MuPDF FzStextOptions)
+	// Flags 文本提取标志位（参见 MuPDF 的 FzStextOptions）
 	Flags int
 }
 
-// GetTextBlocks returns text blocks with their bounding boxes.
+// GetTextBlocks 返回页面的文本块列表，包含每个块的边界框和文本内容。
 func (p *Page) GetTextBlocks() ([]TextBlock, error) {
 	if p.page == nil {
 		return nil, fmt.Errorf("page is nil")
@@ -89,8 +91,8 @@ func (p *Page) GetTextBlocks() ([]TextBlock, error) {
 			Type:   blockType,
 		}
 
-		if blockType == 0 { // Text block
-			// Extract lines from text block
+		if blockType == 0 { // 文本块
+			// 从文本块中提取行
 			lineCount := stextPage.LineCount(block)
 			textBlock.Lines = make([]TextLine, 0, lineCount)
 
@@ -108,7 +110,7 @@ func (p *Page) GetTextBlocks() ([]TextBlock, error) {
 					WDir: Point{X: dx, Y: dy},
 				}
 
-				// Extract characters from line
+				// 从行中提取字符
 				var chars []TextFragment
 				ch := stextPage.FirstChar(line)
 				for ch != nil {
@@ -138,7 +140,7 @@ func (p *Page) GetTextBlocks() ([]TextBlock, error) {
 				textBlock.Lines = append(textBlock.Lines, textLine)
 			}
 
-			// Build text content from fragments
+			// 从片段中构建文本内容
 			var textContent string
 			for _, line := range textBlock.Lines {
 				for _, frag := range line.Frags {
@@ -154,13 +156,13 @@ func (p *Page) GetTextBlocks() ([]TextBlock, error) {
 	return blocks, nil
 }
 
-// GetText returns the text content of the page.
+// GetText 返回页面的纯文本内容。
 func (p *Page) GetText(options *TextOptions) (string, error) {
 	if p.page == nil {
 		return "", fmt.Errorf("page is nil")
 	}
 
-	// Create structured text page from the page
+	// 从页面创建结构化文本页
 	stextPage, err := cgo_bindings.NewTextPage(p.page)
 	if err != nil {
 		return "", fmt.Errorf("failed to create text page: %w", err)
@@ -170,7 +172,7 @@ func (p *Page) GetText(options *TextOptions) (string, error) {
 	return stextPage.Text(), nil
 }
 
-// GetTextHTML returns the text content of the page as HTML.
+// GetTextHTML 返回页面的 HTML 格式文本内容。
 func (p *Page) GetTextHTML() (string, error) {
 	if p.page == nil {
 		return "", fmt.Errorf("page is nil")
@@ -183,7 +185,7 @@ func (p *Page) GetTextHTML() (string, error) {
 	return stextPage.HTML(), nil
 }
 
-// GetTextXML returns the text content of the page as XML.
+// GetTextXML 返回页面的 XML 格式文本内容。
 func (p *Page) GetTextXML() (string, error) {
 	if p.page == nil {
 		return "", fmt.Errorf("page is nil")
@@ -196,7 +198,7 @@ func (p *Page) GetTextXML() (string, error) {
 	return stextPage.XML(), nil
 }
 
-// GetTextXHTML returns the text content of the page as XHTML.
+// GetTextXHTML 返回页面的 XHTML 格式文本内容。
 func (p *Page) GetTextXHTML() (string, error) {
 	if p.page == nil {
 		return "", fmt.Errorf("page is nil")
@@ -209,7 +211,7 @@ func (p *Page) GetTextXHTML() (string, error) {
 	return stextPage.XHTML(), nil
 }
 
-// GetTextJSON returns the text content of the page as JSON.
+// GetTextJSON 返回页面的 JSON 格式文本内容。
 func (p *Page) GetTextJSON() (string, error) {
 	if p.page == nil {
 		return "", fmt.Errorf("page is nil")
@@ -222,7 +224,7 @@ func (p *Page) GetTextJSON() (string, error) {
 	return stextPage.JSON(), nil
 }
 
-// GetTextWords returns words with their bounding boxes.
+// GetTextWords 返回页面的单词列表及其边界框。
 func (p *Page) GetTextWords() ([]TextWord, error) {
 	blocks, err := p.GetTextBlocks()
 	if err != nil {
@@ -231,7 +233,7 @@ func (p *Page) GetTextWords() ([]TextWord, error) {
 
 	var words []TextWord
 	for bi, block := range blocks {
-		if block.Type != 0 { // Skip image blocks
+		if block.Type != 0 { // 跳过图像块
 			continue
 		}
 		for li, line := range block.Lines {
@@ -253,8 +255,8 @@ func (p *Page) GetTextWords() ([]TextWord, error) {
 	return words, nil
 }
 
-// GetTextDict returns structured text extraction with coordinates.
-// Returns a dictionary with "blocks" containing text and image blocks.
+// GetTextDict 返回带有坐标的结构化文本提取结果，以字典形式表示。
+// 返回的字典中 "blocks" 键包含文本和图像块列表。
 func (p *Page) GetTextDict() (map[string]interface{}, error) {
 	blocks, err := p.GetTextBlocks()
 	if err != nil {
@@ -267,8 +269,8 @@ func (p *Page) GetTextDict() (map[string]interface{}, error) {
 	return result, nil
 }
 
-// Close releases the page resources.
+// Close 释放页面相关资源。
 func (p *Page) Close() error {
-	// TODO: implement
+	// TODO: 待实现
 	return nil
 }

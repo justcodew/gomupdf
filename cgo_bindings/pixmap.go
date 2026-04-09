@@ -1,3 +1,20 @@
+// Package cgo 提供对 MuPDF C 库的 CGO 绑定，封装 PDF 文档的底层操作。
+//
+// 本文件（pixmap.go）包含 Pixmap（光栅图像）相关的操作函数，涵盖：
+//   - Pixmap 创建（RenderPage、NewPixmap、NewPixmapFromImage）
+//   - Pixmap 销毁（Destroy）
+//   - Pixmap 属性查询（Width、Height、Stride、N）
+//   - 像素数据访问（Samples、Pixel、SetPixel）
+//   - 文件保存（SavePNG、SaveJPEG）
+//   - 内存编码输出（PNGBytes、JPEGBytes）
+//   - 像素操作（ClearWith、Invert、Gamma、Tint）
+//
+// CGO 模式说明：
+//   - C.fz_pixmap 是 MuPDF 的光栅图像类型
+//   - 像素数据通过 C.GoBytes(unsafe.Pointer(ptr), len) 从 C 内存拷贝到 Go []byte
+//   - C 端分配的输出缓冲区通过 C.free(unsafe.Pointer(...)) 释放
+//   - 不使用 SetFinalizer，调用者必须显式调用 Destroy() 释放资源
+//   - 所有 MuPDF 调用均在 ctx.WithLock 回调中执行，保证线程安全
 package cgo
 
 /*
@@ -14,13 +31,15 @@ import (
 	"unsafe"
 )
 
-// Pixmap represents a raster image.
+// Pixmap 表示一个光栅图像（像素图），封装 MuPDF 的 fz_pixmap 指针。
 type Pixmap struct {
-	ctx *Context
-	pix *C.fz_pixmap
+	ctx *Context        // MuPDF 上下文
+	pix *C.fz_pixmap   // C 端 fz_pixmap 指针
 }
 
-// RenderPage renders a page to a pixmap.
+// RenderPage 将 PDF 页面渲染为 Pixmap。
+// a,b,c,d,e,f 为仿射变换矩阵的 6 个分量（控制缩放、旋转、平移等）。
+// alpha 控制是否生成带透明通道的图像。
 func RenderPage(ctx *Context, page *C.fz_page, a, b, c, d, e, f float64, alpha bool) (*Pixmap, error) {
 	var pix *C.fz_pixmap
 	var alphaInt C.int
@@ -41,12 +60,13 @@ func RenderPage(ctx *Context, page *C.fz_page, a, b, c, d, e, f float64, alpha b
 		pix: pix,
 	}
 
-	// Note: No SetFinalizer - caller must explicitly call Destroy()
-	// This avoids crashes during shutdown when context might be corrupted
+	// 注意：不使用 SetFinalizer，调用者必须显式调用 Destroy()
+	// 这可以避免关闭时上下文可能已损坏导致的崩溃
 	return p, nil
 }
 
-// NewPixmap creates a new pixmap with the given dimensions.
+// NewPixmap 创建指定宽高的空白 RGB Pixmap。
+// 内部先通过 C 端获取 RGB 颜色空间，再创建 Pixmap（颜色空间引用由 Pixmap 持有，无需单独释放）。
 func NewPixmap(ctx *Context, width, height int) (*Pixmap, error) {
 	var pix *C.fz_pixmap
 
@@ -65,11 +85,11 @@ func NewPixmap(ctx *Context, width, height int) (*Pixmap, error) {
 		pix: pix,
 	}
 
-	// Note: No SetFinalizer - caller must explicitly call Destroy()
+	// 注意：不使用 SetFinalizer，调用者必须显式调用 Destroy()
 	return p, nil
 }
 
-// NewPixmapFromImage creates a pixmap from an fz_image.
+// NewPixmapFromImage 从 fz_image 指针创建 Pixmap（将图像解码为像素数据）。
 func NewPixmapFromImage(ctx *Context, img *C.fz_image) (*Pixmap, error) {
 	if ctx == nil || img == nil {
 		return nil, errors.New("nil context or image")
@@ -84,7 +104,7 @@ func NewPixmapFromImage(ctx *Context, img *C.fz_image) (*Pixmap, error) {
 	return &Pixmap{ctx: ctx, pix: pix}, nil
 }
 
-// Destroy releases the pixmap.
+// Destroy 释放 Pixmap 的 C 端资源。调用后 Pixmap 不可再使用。
 func (p *Pixmap) Destroy() {
 	if p.pix != nil && p.ctx != nil {
 		p.ctx.WithLock(func() {
@@ -94,7 +114,7 @@ func (p *Pixmap) Destroy() {
 	}
 }
 
-// Width returns the pixmap width.
+// Width 返回 Pixmap 的宽度（像素）。
 func (p *Pixmap) Width() int {
 	if p.pix == nil || p.ctx == nil {
 		return 0
@@ -106,7 +126,7 @@ func (p *Pixmap) Width() int {
 	return int(w)
 }
 
-// Height returns the pixmap height.
+// Height 返回 Pixmap 的高度（像素）。
 func (p *Pixmap) Height() int {
 	if p.pix == nil || p.ctx == nil {
 		return 0
@@ -118,7 +138,7 @@ func (p *Pixmap) Height() int {
 	return int(h)
 }
 
-// Stride returns the pixmap stride (bytes per row).
+// Stride 返回 Pixmap 的行跨度（每行字节数，可能大于 width * n）。
 func (p *Pixmap) Stride() int {
 	if p.pix == nil || p.ctx == nil {
 		return 0
@@ -130,7 +150,7 @@ func (p *Pixmap) Stride() int {
 	return int(stride)
 }
 
-// N returns the number of color components.
+// N 返回 Pixmap 的颜色分量数（如 RGB=3, RGBA=4, Gray=1）。
 func (p *Pixmap) N() int {
 	if p.pix == nil || p.ctx == nil {
 		return 0
@@ -142,7 +162,9 @@ func (p *Pixmap) N() int {
 	return int(n)
 }
 
-// Samples returns the raw pixel data.
+// Samples 返回原始像素数据（[]byte）。
+// 通过 C.GoBytes 将 C 内存中的像素缓冲区拷贝为 Go 字节切片。
+// 数据总长度 = stride * height。
 func (p *Pixmap) Samples() []byte {
 	if p.pix == nil || p.ctx == nil {
 		return nil
@@ -165,7 +187,8 @@ func (p *Pixmap) Samples() []byte {
 	return C.GoBytes(unsafe.Pointer(ptr), len)
 }
 
-// SavePNG saves the pixmap as a PNG file.
+// SavePNG 将 Pixmap 保存为 PNG 文件。
+// Go 字符串文件名通过 C.CString 转换，使用后通过 defer C.free 释放。
 func (p *Pixmap) SavePNG(filename string) error {
 	if p.pix == nil || p.ctx == nil {
 		return errors.New("pixmap is nil")
@@ -181,7 +204,7 @@ func (p *Pixmap) SavePNG(filename string) error {
 	return nil
 }
 
-// SaveJPEG saves the pixmap as a JPEG file.
+// SaveJPEG 将 Pixmap 保存为 JPEG 文件，quality 为 JPEG 质量（1-100）。
 func (p *Pixmap) SaveJPEG(filename string, quality int) error {
 	if p.pix == nil || p.ctx == nil {
 		return errors.New("pixmap is nil")
@@ -197,7 +220,9 @@ func (p *Pixmap) SaveJPEG(filename string, quality int) error {
 	return nil
 }
 
-// PNGBytes returns the pixmap encoded as PNG bytes.
+// PNGBytes 将 Pixmap 编码为 PNG 格式的字节切片。
+// C 端通过输出参数（outData 指针 + outLen 长度）返回编码结果，
+// Go 侧通过 C.GoBytes 拷贝为 []byte，然后通过 defer C.free 释放 C 端缓冲区。
 func (p *Pixmap) PNGBytes() ([]byte, error) {
 	if p.pix == nil || p.ctx == nil {
 		return nil, errors.New("pixmap is nil")
@@ -215,7 +240,8 @@ func (p *Pixmap) PNGBytes() ([]byte, error) {
 	return C.GoBytes(unsafe.Pointer(outData), C.int(outLen)), nil
 }
 
-// JPEGBytes returns the pixmap encoded as JPEG bytes.
+// JPEGBytes 将 Pixmap 编码为 JPEG 格式的字节切片，quality 为 JPEG 质量（1-100）。
+// 内存管理模式与 PNGBytes 相同。
 func (p *Pixmap) JPEGBytes(quality int) ([]byte, error) {
 	if p.pix == nil || p.ctx == nil {
 		return nil, errors.New("pixmap is nil")
@@ -233,7 +259,7 @@ func (p *Pixmap) JPEGBytes(quality int) ([]byte, error) {
 	return C.GoBytes(unsafe.Pointer(outData), C.int(outLen)), nil
 }
 
-// Pixel returns the pixel value at (x, y).
+// Pixel 返回指定坐标 (x, y) 处的像素值。
 func (p *Pixmap) Pixel(x, y int) int {
 	if p.pix == nil || p.ctx == nil {
 		return 0
@@ -245,7 +271,8 @@ func (p *Pixmap) Pixel(x, y int) int {
 	return int(val)
 }
 
-// SetPixel sets the pixel value at (x, y).
+// SetPixel 设置指定坐标 (x, y) 处的像素值。
+// Go int 通过 C.uint() 转换为 C.uint（无符号整型）传入 C 端。
 func (p *Pixmap) SetPixel(x, y, val int) {
 	if p.pix == nil || p.ctx == nil {
 		return
@@ -255,7 +282,7 @@ func (p *Pixmap) SetPixel(x, y, val int) {
 	})
 }
 
-// ClearWith clears the pixmap with the given value.
+// ClearWith 使用指定值填充整个 Pixmap 的所有像素。
 func (p *Pixmap) ClearWith(value int) {
 	if p.pix == nil || p.ctx == nil {
 		return
@@ -265,7 +292,7 @@ func (p *Pixmap) ClearWith(value int) {
 	})
 }
 
-// Invert inverts the pixmap colors.
+// Invert 反转 Pixmap 的所有颜色（生成底片效果）。
 func (p *Pixmap) Invert() {
 	if p.pix == nil || p.ctx == nil {
 		return
@@ -275,7 +302,7 @@ func (p *Pixmap) Invert() {
 	})
 }
 
-// Gamma applies gamma correction.
+// Gamma 对 Pixmap 应用伽马校正。gamma 参数通过 C.float() 转换传入 C 端。
 func (p *Pixmap) Gamma(gamma float64) {
 	if p.pix == nil || p.ctx == nil {
 		return
@@ -285,7 +312,7 @@ func (p *Pixmap) Gamma(gamma float64) {
 	})
 }
 
-// Tint applies tinting with black and white values.
+// Tint 使用指定的黑/白值对 Pixmap 进行着色处理。
 func (p *Pixmap) Tint(black, white int) {
 	if p.pix == nil || p.ctx == nil {
 		return
