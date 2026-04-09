@@ -1,5 +1,6 @@
 #include "bindings.h"
 #include <string.h>
+#include <time.h>
 
 // Thread-local error message buffer for fz_try/fz_catch error propagation
 static __thread char gomupdf_last_error[512] = {0};
