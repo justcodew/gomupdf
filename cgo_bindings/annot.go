@@ -303,9 +303,11 @@ func (a *Annot) QuadPoints() []Rect {
 		return nil
 	}
 	defer C.free(unsafe.Pointer(quads))
+	// 转换 fz_quad 数组为 Rect 列表
+	// quads 是 C 分配的数组，需要逐个访问
 	result := make([]Rect, count)
 	for i := 0; i < int(count); i++ {
-		q := C.gomupdf_quad_rect(quads[C.int(i)])
+		q := C.gomupdf_quad_rect(*(*C.fz_quad)(unsafe.Pointer(uintptr(unsafe.Pointer(quads)) + uintptr(i)*unsafe.Sizeof(*quads))))
 		result[i] = Rect{X0: float64(q.x0), Y0: float64(q.y0), X1: float64(q.x1), Y1: float64(q.y1)}
 	}
 	return result
