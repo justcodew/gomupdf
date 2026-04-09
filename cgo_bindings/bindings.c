@@ -1504,11 +1504,11 @@ fz_buffer *gomupdf_pdf_page_write_begin(fz_context *ctx, fz_document *doc, fz_pa
     fz_buffer *buf = NULL;
     fz_try(ctx) {
         buf = fz_new_buffer(ctx, 256);
-        pdf_obj *res = pp->resources;
+        pdf_obj *res = pdf_page_resources(ctx, pp);
         fz_device *dev = pdf_page_write(ctx, pdf, fz_bound_page(ctx, page), &res, &buf);
         fz_drop_device(ctx, dev);
     }
-    fz_catch(ctx) { buf = NULL; }
+    fz_catch(ctx) { if (buf) { fz_drop_buffer(ctx, buf); buf = NULL; } }
     return buf;
 }
 
@@ -1520,7 +1520,8 @@ int gomupdf_pdf_page_write_end(fz_context *ctx, fz_document *doc, fz_page *page,
     pdf_page *pp = pdf_page_from_fz_page(ctx, page);
     if (!pp) return -1;
     fz_try(ctx) {
-        pdf_update_contents_stream(ctx, pdf, pp->obj, contents);
+        /* 将新内容流写入页面对象 */
+        pdf_update_stream(ctx, pdf, pp->obj, contents);
     }
     fz_catch(ctx) { return -1; }
     return 0;
