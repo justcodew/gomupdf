@@ -160,4 +160,265 @@ $ go run examples/extract/main.go test.pdf
 
 ---
 
-## 阶段 2：文本处理完整化（进行中）
+## 阶段 2：文本处理完整化（已完成）
+
+### 2.1 多格式文本输出
+
+| 格式 | C 函数 | Go 方法 | 状态 |
+|------|--------|---------|------|
+| 纯文本 | `gomupdf_stext_page_text`（已有） | `TextPage.Text()` | 已完成 |
+| HTML | `gomupdf_stext_page_to_html` | `TextPage.HTML()` | 已完成 |
+| XML | `gomupdf_stext_page_to_xml` | `TextPage.XML()` | 已完成 |
+| XHTML | `gomupdf_stext_page_to_xhtml` | `TextPage.XHTML()` | 已完成 |
+| JSON | `gomupdf_stext_page_to_json` | `TextPage.JSON()` | 已完成 |
+
+### 2.2 字符级属性
+
+| 属性 | C 函数 | Go 方法 | 状态 |
+|------|--------|---------|------|
+| 字体名 | `gomupdf_stext_char_font` | `TextPage.CharFont()` | 已完成 |
+| 字符标志 | `gomupdf_stext_char_flags` | `TextPage.CharFlags()` | 已完成 |
+
+### fitz 层更新
+
+- `fitz/text.go` — 新增 `GetTextHTML()`, `GetTextXML()`, `GetTextXHTML()`, `GetTextJSON()`
+
+### 测试
+
+新增 3 个测试：`TestTextHTML`, `TestTextXML`, `TestTextJSON` — 全部通过
+
+---
+
+## 阶段 3：图像处理完整化（已完成）
+
+### 3.1 图像像素提取
+
+| 功能 | C 函数 | Go 方法 | 状态 |
+|------|--------|---------|------|
+| 图像转 Pixmap | `gomupdf_image_get_pixmap` | `NewPixmapFromImage()` | 已完成 |
+| Pixmap → PNG 字节 | `gomupdf_pixmap_to_png_bytes` | `Pixmap.PNGBytes()` | 已完成 |
+| Pixmap → JPEG 字节 | `gomupdf_pixmap_to_jpeg_bytes` | `Pixmap.JPEGBytes()` | 已完成 |
+
+### 3.2 Pixmap 操作
+
+| 操作 | C 函数 | Go 方法 | 状态 |
+|------|--------|---------|------|
+| 读取像素 | `gomupdf_pixmap_pixel` | `Pixmap.Pixel()` | 已完成 |
+| 设置像素 | `gomupdf_pixmap_set_pixel` | `Pixmap.SetPixel()` | 已完成 |
+| 清空 | `gomupdf_pixmap_clear_with` | `Pixmap.ClearWith()` | 已完成 |
+| 反色 | `gomupdf_pixmap_invert` | `Pixmap.Invert()` | 已完成 |
+| Gamma 校正 | `gomupdf_pixmap_gamma` | `Pixmap.Gamma()` | 已完成 |
+| 着色 | `gomupdf_pixmap_tint` | `Pixmap.Tint()` | 已完成 |
+
+### fitz 层更新
+
+- `fitz/pixmap.go` — 实现 `PNG()`, `JPEG()`, `Pixel()`, `SetPixel()`, `ClearWith()`, `Invert()`, `Gamma()`, `Tint()`
+- `fitz/image.go` — 实现 `GetImages()`, `ExtractImage()` 从图像块提取像素数据
+
+### 测试
+
+新增 3 个测试：`TestPixmapPNGBytes`, `TestPixmapJPEGBytes`, `TestPixmapPixelOps` — 全部通过
+
+---
+
+## 阶段 4：注释系统（已完成）
+
+### 4.1 注释基础设施
+
+| 功能 | C 函数 | 状态 |
+|------|--------|------|
+| 获取首个注释 | `gomupdf_pdf_first_annot` | 已完成 |
+| 遍历注释 | `gomupdf_pdf_next_annot` | 已完成 |
+| 注释类型 | `gomupdf_pdf_annot_type` | 已完成 |
+| 注释矩形 | `gomupdf_pdf_annot_rect` / `gomupdf_pdf_set_annot_rect` | 已完成 |
+| 注释内容 | `gomupdf_pdf_annot_contents` / `gomupdf_pdf_set_annot_contents` | 已完成 |
+| 注释颜色 | `gomupdf_pdf_annot_color` / `gomupdf_pdf_set_annot_color` | 已完成 |
+| 注释透明度 | `gomupdf_pdf_annot_opacity` / `gomupdf_pdf_set_annot_opacity` | 已完成 |
+| 注释标志 | `gomupdf_pdf_annot_flags` / `gomupdf_pdf_set_annot_flags` | 已完成 |
+| 注释边框 | `gomupdf_pdf_annot_border` / `gomupdf_pdf_set_annot_border` | 已完成 |
+| 注释标题 | `gomupdf_pdf_annot_title` / `gomupdf_pdf_set_annot_title` | 已完成 |
+| 弹出窗口 | `gomupdf_pdf_annot_popup` / `gomupdf_pdf_set_annot_popup` | 已完成 |
+| Quad Points | `gomupdf_pdf_annot_quad_points` / `gomupdf_pdf_set_annot_quad_points` | 已完成 |
+| 更新注释 | `gomupdf_pdf_update_annot` | 已完成 |
+| 删除注释 | `gomupdf_pdf_delete_annot` | 已完成 |
+| 创建注释 | `gomupdf_pdf_create_annot` | 已完成 |
+| 应用涂黑 | `gomupdf_pdf_apply_redactions` | 已完成 |
+
+### 新增 Go 文件
+
+- `cgo_bindings/annot.go` — 注释 CGO 封装
+- `fitz/annot.go` — 完整的 Annot Go 类型（含所有属性方法）
+
+### fitz 层 Page 方法
+
+- `Page.Annots()` — 获取注释列表
+- `Page.AddAnnot()` — 创建注释
+- `Page.AddHighlightAnnot()` — 高亮注释
+- `Page.AddStrikeoutAnnot()` — 删除线注释
+- `Page.AddUnderlineAnnot()` — 下划线注释
+- `Page.AddSquigglyAnnot()` — 波浪线注释
+- `Page.AddTextAnnot()` — 文本（便签）注释
+- `Page.AddFreeTextAnnot()` — 自由文本注释
+- `Page.AddRedactAnnot()` — 涂黑注释
+- `Page.ApplyRedactions()` — 应用涂黑
+
+### 测试
+
+新增 `TestAnnotationCRUD` — 通过
+
+---
+
+## 阶段 5：链接与导航（已完成）
+
+### 新增功能
+
+| 功能 | C 函数 | 状态 |
+|------|--------|------|
+| 创建链接 | `gomupdf_pdf_create_link` | 已完成 |
+| 删除链接 | `gomupdf_pdf_delete_link` | 已完成 |
+
+### fitz 层
+
+- `Page.AddLink()` — 添加链接
+
+---
+
+## 阶段 6：Shape 绘图系统（已完成）
+
+### 内容流操作
+
+| 功能 | C 函数 | 状态 |
+|------|--------|------|
+| 开始写入内容流 | `gomupdf_pdf_page_write_begin` | 已完成 |
+| 结束写入内容流 | `gomupdf_pdf_page_write_end` | 已完成 |
+
+---
+
+## 阶段 7：文本写入与字体（已完成）
+
+### 字体操作
+
+| 功能 | C 函数 | Go 方法 | 状态 |
+|------|--------|---------|------|
+| 从文件加载字体 | `gomupdf_new_font_from_file` | `NewFontFromFile()` | 已完成 |
+| 从缓冲区加载字体 | `gomupdf_new_font_from_buffer` | `NewFontFromBuffer()` | 已完成 |
+| 字体名称 | `gomupdf_font_name` | `Font.Name()` | 已完成 |
+| 升部线 | `gomupdf_font_ascender` | `Font.Ascender()` | 已完成 |
+| 降部线 | `gomupdf_font_descender` | `Font.Descender()` | 已完成 |
+| 文本测量 | `gomupdf_measure_text` | `Font.MeasureText()` | 已完成 |
+| 字形步进 | `gomupdf_font_glyph_advance` | `Font.GlyphAdvance()` | 已完成 |
+
+### 新增文件
+
+- `cgo_bindings/font.go` — 字体 CGO 封装
+- `fitz/font.go` — Font Go 类型
+
+### 测试
+
+新增 `TestFontMeasure` — 通过（系统 Helvetica 字体，测量 "Hello, World!" = 68.68pt @12pt）
+
+---
+
+## 阶段 8：Widget 表单系统（已完成）
+
+### 表单操作
+
+| 功能 | C 函数 | Go 方法 | 状态 |
+|------|--------|---------|------|
+| 获取首个控件 | `gomupdf_pdf_first_widget` | `FirstWidget()` | 已完成 |
+| 遍历控件 | `gomupdf_pdf_next_widget` | `Widget.Next()` | 已完成 |
+| 控件类型 | `gomupdf_pdf_widget_type` | `Widget.Type()` | 已完成 |
+| 字段名 | `pdf_annot_field_label` | `Widget.FieldName()` | 已完成 |
+| 字段值 | `pdf_annot_field_value` | `Widget.FieldValue()` | 已完成 |
+| 设置字段值 | `pdf_set_text_field_value` | `Widget.SetFieldValue()` | 已完成 |
+| 字段标志 | `pdf_annot_field_flags` | `Widget.FieldFlags()` | 已完成 |
+| 复选框选中状态 | 通过 /AS 字段 | `Widget.IsChecked()` | 已完成 |
+| 切换复选框 | `pdf_toggle_widget` | `Widget.Toggle()` | 已完成 |
+
+### 新增文件
+
+- `cgo_bindings/widget.go` — Widget CGO 封装
+- `fitz/widget.go` — Widget Go 类型
+
+### fitz 层
+
+- `Page.Widgets()` — 获取页面所有表单控件
+
+### 测试
+
+新增 `TestWidgets` — 通过
+
+---
+
+## 阶段 9：高级功能（已完成）
+
+### 9.1 DisplayList
+
+| 功能 | C 函数 | Go 方法 | 状态 |
+|------|--------|---------|------|
+| 创建显示列表 | `gomupdf_new_display_list` | `NewDisplayList()` | 已完成 |
+| 页面渲染到列表 | `gomupdf_run_page_to_list` | `RunPageToDisplayList()` | 已完成 |
+| 列表渲染为 Pixmap | `gomupdf_display_list_get_pixmap` | `DisplayList.GetPixmap()` | 已完成 |
+
+### 9.2 页面属性
+
+| 功能 | C 函数 | Go 方法 | 状态 |
+|------|--------|---------|------|
+| MediaBox | `gomupdf_pdf_page_mediabox` | `Page.MediaBox()` | 已完成 |
+| CropBox | `gomupdf_pdf_page_cropbox` | `Page.CropBox()` | 已完成 |
+| 设置 MediaBox | `gomupdf_pdf_set_page_mediabox` | `Page.SetMediaBox()` | 已完成 |
+| 设置 CropBox | `gomupdf_pdf_set_page_cropbox` | `Page.SetCropBox()` | 已完成 |
+| 设置旋转 | `gomupdf_pdf_set_page_rotation` | `Page.SetRotation()` | 已完成 |
+
+### 9.3 XRef 操作
+
+| 功能 | C 函数 | Go 方法 | 状态 |
+|------|--------|---------|------|
+| XRef 长度 | `gomupdf_pdf_xref_length` | `Document.XRefLength()` | 已完成 |
+| 获取对象键 | `gomupdf_pdf_xref_get_key` | `Document.XRefGetKey()` | 已完成 |
+| 判断流对象 | `gomupdf_pdf_xref_is_stream` | `Document.XRefIsStream()` | 已完成 |
+
+### 9.4 嵌入文件
+
+| 功能 | C 函数 | Go 方法 | 状态 |
+|------|--------|---------|------|
+| 嵌入文件数量 | 通过 Names 字典 | `Document.EmbeddedFileCount()` | 已完成 |
+| 文件名 | 通过 Names 字典 | `Document.EmbeddedFileName()` | 已完成 |
+| 获取文件数据 | `pdf_load_embedded_file_contents` | `Document.EmbeddedFileGet()` | 已完成 |
+| 添加嵌入文件 | `pdf_add_embedded_file` | `Document.AddEmbeddedFile()` | 已完成 |
+
+### 新增文件
+
+- `cgo_bindings/advanced.go` — DisplayList、页面属性、XRef、嵌入文件 CGO 封装
+
+### 测试
+
+新增 4 个测试：`TestDisplayList`, `TestPageBox`, `TestXRef`, `TestEmbeddedFiles` — 全部通过
+
+---
+
+## 测试总结
+
+| 阶段 | 新增测试 | 状态 |
+|------|---------|------|
+| 阶段 0-1（已有） | 16 个 | 全部通过 |
+| 阶段 2 文本格式 | 3 个 | 全部通过 |
+| 阶段 3 图像处理 | 3 个 | 全部通过 |
+| 阶段 4 注释系统 | 1 个 | 全部通过 |
+| 阶段 7 字体操作 | 1 个 | 全部通过 |
+| 阶段 8 Widget | 1 个 | 全部通过 |
+| 阶段 9 高级功能 | 4 个 | 全部通过 |
+| **合计** | **29 个** | **全部通过（1.2s）** |
+
+---
+
+## 代码统计
+
+| 指标 | 阶段 0-1 | 阶段 2-9 | 合计 |
+|------|---------|---------|------|
+| C 代码 (bindings.c) | ~995 行 | ~900 行 | ~1895 行 |
+| C 头文件 (bindings.h) | ~166 行 | ~170 行 | ~336 行 |
+| cgo_bindings/*.go | ~1300 行 | ~1300 行 | ~2600 行 |
+| fitz/*.go | ~650 行 | ~900 行 | ~1550 行 |
+| 测试代码 | ~426 行 | ~400 行 | ~826 行 |
+| **总计** | **~3537 行** | **~3670 行** | **~7207 行** |
