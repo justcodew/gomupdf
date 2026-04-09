@@ -1576,7 +1576,14 @@ float gomupdf_measure_text(fz_context *ctx, fz_font *font, const char *text, flo
     if (!ctx || !font || !text) return 0;
     float width = 0;
     fz_try(ctx) {
-        width = fz_measure_text(ctx, font, text, size, 0, NULL);
+        /* 逐字符测量文本宽度 */
+        const unsigned char *s = (const unsigned char *)text;
+        int chr;
+        while (*s) {
+            s += fz_chartorune(&chr, (const char *)s);
+            int glyph = fz_encode_character(ctx, font, chr);
+            width += fz_advance_glyph(ctx, font, glyph, 0) * size;
+        }
     }
     fz_catch(ctx) { width = 0; }
     return width;
