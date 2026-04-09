@@ -210,3 +210,59 @@ func (d *Document) String() string {
 func (d *Document) GetDoc() *cgo_bindings.Document {
 	return d.doc
 }
+
+// XRefLength returns the XRef table length.
+func (d *Document) XRefLength() int {
+	if d.doc == nil {
+		return 0
+	}
+	return cgo_bindings.XRefLength(d.ctx, d.doc.Doc)
+}
+
+// XRefGetKey returns the value of a key in an XRef object.
+func (d *Document) XRefGetKey(xref int, key string) string {
+	if d.doc == nil {
+		return ""
+	}
+	return cgo_bindings.XRefGetKey(d.ctx, d.doc.Doc, xref, key)
+}
+
+// XRefIsStream returns whether an XRef entry is a stream.
+func (d *Document) XRefIsStream(xref int) bool {
+	if d.doc == nil {
+		return false
+	}
+	return cgo_bindings.XRefIsStream(d.ctx, d.doc.Doc, xref)
+}
+
+// EmbeddedFileCount returns the number of embedded files.
+func (d *Document) EmbeddedFileCount() int {
+	if d.doc == nil {
+		return 0
+	}
+	return cgo_bindings.EmbeddedFileCount(d.ctx, d.doc.Doc)
+}
+
+// EmbeddedFileName returns the name of an embedded file.
+func (d *Document) EmbeddedFileName(idx int) string {
+	if d.doc == nil {
+		return ""
+	}
+	return cgo_bindings.EmbeddedFileName(d.ctx, d.doc.Doc, idx)
+}
+
+// EmbeddedFileGet returns the data of an embedded file.
+func (d *Document) EmbeddedFileGet(idx int) ([]byte, error) {
+	if d.doc == nil {
+		return nil, fmt.Errorf("document is closed")
+	}
+	return cgo_bindings.EmbeddedFileGet(d.ctx, d.doc.Doc, idx)
+}
+
+// AddEmbeddedFile adds an embedded file to the document.
+func (d *Document) AddEmbeddedFile(filename, mimetype string, data []byte) error {
+	if d.doc == nil {
+		return fmt.Errorf("document is closed")
+	}
+	return cgo_bindings.AddEmbeddedFile(d.ctx, d.doc.Doc, filename, mimetype, data)
+}
