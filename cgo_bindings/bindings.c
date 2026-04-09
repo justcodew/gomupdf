@@ -1828,24 +1828,29 @@ const char *gomupdf_pdf_xref_get_key(fz_context *ctx, fz_document *doc, int xref
     if (!pdf) return "";
     static __thread char buf[1024];
     fz_try(ctx) {
-        pdf_obj *xobj = pdf_xref_get_object(ctx, pdf, xref);
+        pdf_obj *xobj = pdf_load_object(ctx, pdf, xref);
         if (xobj && pdf_is_dict(ctx, xobj)) {
             pdf_obj *val = pdf_dict_gets(ctx, xobj, key);
             if (val) {
                 fz_buffer *b = fz_new_buffer(ctx, 1024);
                 fz_try(ctx) {
-                    fz_append_pdf_string(ctx, b, val);
-                    size_t len = b->len;
-                    if (len >= sizeof(buf)) len = sizeof(buf) - 1;
-                    memcpy(buf, b->data, len);
-                    buf[len] = 0;
+                    /* 简单地将对象转为字符串表示 */
+                    const char *s = pdf_to_name(ctx, val);
+                    if (s && s[0]) snprintf(buf, sizeof(buf), "/%s", s);
+                    else {
+                        s = pdf_to_text_string(ctx, val);
+                        if (s) snprintf(buf, sizeof(buf), "%s", s);
+                        else buf[0] = 0;
+                    }
                 }
                 fz_always(ctx) { fz_drop_buffer(ctx, b); }
                 fz_catch(ctx) { buf[0] = 0; }
             } else {
                 buf[0] = 0;
             }
+            pdf_drop_obj(ctx, xobj);
         } else {
+            if (xobj) pdf_drop_obj(ctx, xobj);
             buf[0] = 0;
         }
     }
@@ -1858,7 +1863,10 @@ int gomupdf_pdf_xref_is_stream(fz_context *ctx, fz_document *doc, int xref) {
     pdf_document *pdf = pdf_document_from_fz_document(ctx, doc);
     if (!pdf) return 0;
     int result = 0;
-    fz_try(ctx) { result = pdf_is_stream(ctx, pdf, pdf_xref_get_object(ctx, pdf, xref)); }
+    fz_try(ctx) {
+        pdf_xref_entry *entry = pdf_get_xref_entry(ctx, pdf, xref);
+        result = (entry && entry->stm_ofs >= 0) ? 1 : 0;
+    }
     fz_catch(ctx) {}
     return result;
 }
