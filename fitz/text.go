@@ -170,6 +170,58 @@ func (p *Page) GetText(options *TextOptions) (string, error) {
 	return stextPage.Text(), nil
 }
 
+// GetTextHTML returns the text content of the page as HTML.
+func (p *Page) GetTextHTML() (string, error) {
+	if p.page == nil {
+		return "", fmt.Errorf("page is nil")
+	}
+	stextPage, err := cgo_bindings.NewTextPage(p.page)
+	if err != nil {
+		return "", err
+	}
+	defer stextPage.Destroy()
+	return stextPage.HTML(), nil
+}
+
+// GetTextXML returns the text content of the page as XML.
+func (p *Page) GetTextXML() (string, error) {
+	if p.page == nil {
+		return "", fmt.Errorf("page is nil")
+	}
+	stextPage, err := cgo_bindings.NewTextPage(p.page)
+	if err != nil {
+		return "", err
+	}
+	defer stextPage.Destroy()
+	return stextPage.XML(), nil
+}
+
+// GetTextXHTML returns the text content of the page as XHTML.
+func (p *Page) GetTextXHTML() (string, error) {
+	if p.page == nil {
+		return "", fmt.Errorf("page is nil")
+	}
+	stextPage, err := cgo_bindings.NewTextPage(p.page)
+	if err != nil {
+		return "", err
+	}
+	defer stextPage.Destroy()
+	return stextPage.XHTML(), nil
+}
+
+// GetTextJSON returns the text content of the page as JSON.
+func (p *Page) GetTextJSON() (string, error) {
+	if p.page == nil {
+		return "", fmt.Errorf("page is nil")
+	}
+	stextPage, err := cgo_bindings.NewTextPage(p.page)
+	if err != nil {
+		return "", err
+	}
+	defer stextPage.Destroy()
+	return stextPage.JSON(), nil
+}
+
 // GetTextWords returns words with their bounding boxes.
 func (p *Page) GetTextWords() ([]TextWord, error) {
 	blocks, err := p.GetTextBlocks()
