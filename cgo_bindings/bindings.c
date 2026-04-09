@@ -1440,7 +1440,9 @@ const char *gomupdf_pdf_annot_title(fz_context *ctx, pdf_annot *annot) {
     if (!ctx || !annot) return "";
     static __thread char buf[512];
     fz_try(ctx) {
-        const char *t = pdf_annot_title(ctx, annot);
+        /* MuPDF 使用 pdf_annot_field_label 获取字段标签，
+           注释标题需要从 PDF 对象的 /T 字段读取 */
+        const char *t = pdf_annot_field_label(ctx, annot);
         if (t) snprintf(buf, sizeof(buf), "%s", t);
         else buf[0] = 0;
     }
@@ -1450,7 +1452,11 @@ const char *gomupdf_pdf_annot_title(fz_context *ctx, pdf_annot *annot) {
 
 int gomupdf_pdf_set_annot_title(fz_context *ctx, pdf_annot *annot, const char *title) {
     if (!ctx || !annot || !title) return -1;
-    fz_try(ctx) { pdf_set_annot_title(ctx, annot, title); }
+    fz_try(ctx) {
+        /* 通过底层 PDF 对象设置 /T 字段 */
+        pdf_obj *obj = pdf_annot_obj(ctx, annot);
+        if (obj) pdf_dict_put_text_string(ctx, obj, PDF_NAME(T), title);
+    }
     fz_catch(ctx) { return -1; }
     return 0;
 }
