@@ -1,0 +1,104 @@
+{
+  "open_close": {
+    "mean_ms": 2.591,
+    "min_ms": 2.045,
+    "max_ms": 7.105,
+    "std_ms": 1.587,
+    "pages": 43
+  },
+  "metadata": {
+    "mean_ms": 0.0,
+    "min_ms": 0.0,
+    "max_ms": 0.0,
+    "std_ms": 0.0,
+    "keys": 11
+  },
+  "load_page": {
+    "mean_ms": 0.037,
+    "min_ms": 0.008,
+    "max_ms": 0.274,
+    "std_ms": 0.083
+  },
+  "render_1x": {
+    "mean_ms": 2.784,
+    "min_ms": 0.696,
+    "max_ms": 20.809,
+    "std_ms": 6.334,
+    "width": 612,
+    "height": 792
+  },
+  "render_2x": {
+    "mean_ms": 1.828,
+    "min_ms": 1.219,
+    "max_ms": 5.674,
+    "std_ms": 1.362,
+    "width": 1224,
+    "height": 1584
+  },
+  "render_all_1x": {
+    "total_ms": 810.6,
+    "per_page_ms": 18.9,
+    "pages": 43
+  },
+  "text_extract": {
+    "mean_ms": 1.503,
+    "min_ms": 1.161,
+    "max_ms": 4.126,
+    "std_ms": 0.924,
+    "text_length": 1355
+  },
+  "text_search": {
+    "mean_ms": 1.22,
+    "min_ms": 1.208,
+    "max_ms": 1.262,
+    "std_ms": 0.016,
+    "hits": 6
+  },
+  "outline": {
+    "mean_ms": 0.408,
+    "min_ms": 0.349,
+    "max_ms": 0.714,
+    "std_ms": 0.109,
+    "count": 31
+  },
+  "save_bytes": {
+    "mean_ms": 34.803,
+    "min_ms": 30.61,
+    "max_ms": 45.23,
+    "std_ms": 5.431,
+    "size_mb": 33.07
+  },
+  "insert_10pages": {
+    "mean_ms": 0.145,
+    "min_ms": 0.137,
+    "max_ms": 0.19
+  },
+  "delete_10pages": {
+    "mean_ms": 1.851,
+    "min_ms": 1.742,
+    "max_ms": 2.73
+  },
+  "pixmap_png": {
+    "mean_ms": 29.078,
+    "min_ms": 28.802,
+    "max_ms": 29.893,
+    "size_kb": 309.4
+  },
+  "pixmap_jpeg": {
+    "mean_ms": 38.997,
+    "min_ms": 38.665,
+    "max_ms": 40.453,
+    "size_kb": 239.7
+  },
+  "links": {
+    "mean_ms": 0.576,
+    "min_ms": 0.252,
+    "max_ms": 3.442,
+    "count": 12
+  },
+  "tool": "PyMuPDF",
+  "version": "1.27.2.2",
+  "file": "arxiv_2603.09677_translated.pdf",
+  "file_size_mb": 32.79,
+  "iterations": 10
+}

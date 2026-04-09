@@ -1,0 +1,7 @@
+# 基准测试生成的文件
+bench_gomupdf
+bench_pymupdf
+benchmark_*_result.json
+benchmark_output.png
+benchmark_*.png
+benchmark_*.pdf

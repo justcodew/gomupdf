@@ -263,6 +263,7 @@ fz_pixmap *gomupdf_render_page(fz_context *ctx, fz_page *page, float a, float b,
     fz_try(ctx) {
         fz_matrix ctm = fz_make_matrix(a, b, c, d, e, f);
         fz_rect rect = fz_bound_page(ctx, page);
+        rect = fz_transform_rect(rect, ctm); /* 用变换矩阵缩放边界矩形 */
         fz_irect irect = fz_round_rect(rect);
         fz_colorspace *cs = fz_device_rgb(ctx);
         pix = fz_new_pixmap(ctx, cs, irect.x1, irect.y1, NULL, alpha ? 1 : 0);

@@ -1,0 +1,109 @@
+{
+  "delete_10pages": {
+    "max_ms": 0.003,
+    "mean_ms": 0.003,
+    "min_ms": 0.002,
+    "std_ms": 0
+  },
+  "file": "/Users/xiongzhaolong/Downloads/claude-pro/code_2026/arxiv_2603.09677_translated.pdf",
+  "file_size_mb": 32.79,
+  "insert_10pages": {
+    "max_ms": 0.023,
+    "mean_ms": 0.014,
+    "min_ms": 0.012,
+    "std_ms": 0.003
+  },
+  "iterations": 10,
+  "links": {
+    "count": 12,
+    "max_ms": 0.008,
+    "mean_ms": 0.003,
+    "min_ms": 0.001,
+    "std_ms": 0.003
+  },
+  "load_page": {
+    "max_ms": 2.418,
+    "mean_ms": 0.243,
+    "min_ms": 0.001,
+    "std_ms": 0.764
+  },
+  "metadata": {
+    "keys": 9,
+    "max_ms": 0.144,
+    "mean_ms": 0.017,
+    "min_ms": 0.002,
+    "std_ms": 0.045
+  },
+  "open_close": {
+    "max_ms": 1.395,
+    "mean_ms": 0.953,
+    "min_ms": 0.62,
+    "pages": 43,
+    "std_ms": 0.204
+  },
+  "outline": {
+    "count": 31,
+    "max_ms": 0.189,
+    "mean_ms": 0.157,
+    "min_ms": 0.148,
+    "std_ms": 0.012
+  },
+  "pixmap_jpeg": {
+    "max_ms": 19.511,
+    "mean_ms": 18.736,
+    "min_ms": 18.248,
+    "size_kb": 239.7,
+    "std_ms": 0.415
+  },
+  "pixmap_png": {
+    "max_ms": 23.707,
+    "mean_ms": 23.45,
+    "min_ms": 23.344,
+    "size_kb": 309.4,
+    "std_ms": 0.118
+  },
+  "render_1x": {
+    "height": 792,
+    "max_ms": 18.573,
+    "mean_ms": 2.689,
+    "min_ms": 0.766,
+    "std_ms": 5.583,
+    "width": 612
+  },
+  "render_2x": {
+    "height": 1584,
+    "max_ms": 6.384,
+    "mean_ms": 2.041,
+    "min_ms": 1.277,
+    "std_ms": 1.548,
+    "width": 1224
+  },
+  "render_all_1x": {
+    "pages": 43,
+    "per_page_ms": 10.3,
+    "total_ms": 444.1
+  },
+  "save_bytes": {
+    "max_ms": 37.696,
+    "mean_ms": 24.936,
+    "min_ms": 18.856,
+    "size_mb": 33.07,
+    "std_ms": 7.213
+  },
+  "text_extract": {
+    "max_ms": 0.726,
+    "mean_ms": 0.555,
+    "min_ms": 0.514,
+    "std_ms": 0.062,
+    "text_length": 2928
+  },
+  "text_search": {
+    "hits": 6,
+    "max_ms": 0.643,
+    "mean_ms": 0.622,
+    "min_ms": 0.613,
+    "std_ms": 0.008
+  },
+  "tool": "gomupdf",
+  "version": ""
+}

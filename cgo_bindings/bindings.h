@@ -4,7 +4,7 @@
  * 本文件定义了 MuPDF C API 的 Go CGO 封装函数。
  * 所有函数以 gomupdf_ 为前缀，通过 CGO 暴露给 Go 层使用。
  *
- * 架构层次：MuPDF C 库 → bindings.c (本层) → cgo_bindings/*.go → fitz/*.go → pdf/*.go
+ * 架构层次：MuPDF C 库 - bindings.c (本层) - cgo_bindings/go - fitz/go - pdf/go
  *
  * 关键设计：
  *   - 使用 fz_try/fz_catch 保护所有 MuPDF 调用，防止异常穿透 Go 栈
